@@ -10,9 +10,9 @@ int main(int argc, const char* argv[]) {
     initChunk(&chunk);
 
     int constant = addConst(&chunk, 1.2);
-    writeChunk(&chunk, OP_CONSTANT);
-    writeChunk(&chunk, constant);
-    writeChunk(&chunk, OP_RETURN);
+    writeChunk(&chunk, OP_CONSTANT, 1);
+    writeChunk(&chunk, constant, 1);
+    writeChunk(&chunk, OP_RETURN, 1);
 
     disassembleChunk(&chunk, "test");
     
