@@ -6,27 +6,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, const char *argv[])
+
+static char *readFile(const char *path)
 {
-    initVM();
-
-    if (argc == 1)
-    {
-        repl();
-    }
-    else if (argc == 2)
-    {
-        interpretFile(argv[1]);
-    }
-    else
-    {
-        fprintf(stderr, "Usage: iii [path]\n");
-        exit(1);
-    }
-
-    freeVM();
-
-    return 0;
+    FILE *file = fopen(path, "rb");
+    fseek(file, 0L, SEEK_END);
+    size_t fileSize = ftell(file);
+    rewind(file);
+    char *buffer = (char *)malloc(fileSize + 1);
+    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+    buffer[bytesRead] = '\0';
+    fclose(file);
+    return buffer;
 }
 
 static void runFile(const char *path)
@@ -55,36 +46,25 @@ static void repl()
     }
 }
 
-static char *readFile(const char *path)
+int main(int argc, const char *argv[])
 {
-    FILE *file = fopen(path, "rb");
-    
-    if (file == NULL)
-    {
-        fprintf(stderr, "Could not open file \"%s\".\n", path);
-        exit(1);
-    }
- 
-    fseek(file, 0L, SEEK_END);
-    size_t fileSize = ftell(file);
-    rewind(file);
-    char *buffer = (char *)malloc(fileSize + 1);
+    initVM();
 
-    if (buffer == NULL)
+    if (argc == 1)
     {
-        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+        repl();
+    }
+    else if (argc == 2)
+    {
+        runFile(argv[1]);
+    }
+    else
+    {
+        fprintf(stderr, "Usage: iii [path]\n");
         exit(1);
     }
 
-    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
-    
-    if (bytesRead < fileSize)
-    {
-        fprintf(stderr, "Could not read file \"%s\".\n", path);
-        exit(1);
-    }
-    
-    buffer[bytesRead] = '\0';
-    fclose(file);
-    return buffer;
+    freeVM();
+
+    return 0;
 }
