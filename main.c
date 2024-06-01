@@ -4,7 +4,8 @@
 
 #include <stdio.h>
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[])
+{
     initVM();
 
     Chunk chunk;
@@ -14,14 +15,20 @@ int main(int argc, const char* argv[]) {
     // for (int i = 0; i < 300; i++)
     // {
     //     writeConstant(&chunk, i, i);
-    // }    
+    // }
 
-    writeConstant(&chunk, 1.2, 123);
-    writeChunk(&chunk, OP_NEGATE, 1);
-    writeChunk(&chunk, OP_RETURN, 2);
+    // create a simple ast
+    // -((1.2 + 3.4) / 5.6) = -0.821429
+    writeConstant(&chunk, 1.2, 1);
+    writeConstant(&chunk, 3.4, 2);
+    writeChunk(&chunk, OP_ADD, 3);
+    writeConstant(&chunk, 5.6, 4);
+    writeChunk(&chunk, OP_DIVIDE, 5);
+    writeChunk(&chunk, OP_NEGATE, 5);
+    writeChunk(&chunk, OP_RETURN, 5);
 
     disassembleChunk(&chunk, "test chunk");
-    
+
     printf("\n== running ==\n");
 
     interpret(&chunk);

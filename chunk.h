@@ -4,26 +4,32 @@
 #include "value.h"
 #include "common.h"
 
-typedef enum {
+typedef enum
+{
     OP_CONSTANT,
     OP_CONSTANT_LONG,
     OP_NEGATE,
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_MULTIPLY,
+    OP_DIVIDE,
     OP_RETURN,
 } OpCode;
 
-typedef struct {
+typedef struct
+{
     int count;
     int capacity;
-    uint8_t* code;
-    int* lines;
+    uint8_t *code;
+    int *lines;
     ValueArray constants;
 } Chunk;
 
-void initChunk(Chunk* chunk);
-void writeChunk(Chunk* chunk, uint8_t byte, int line);
-void writeConstant(Chunk* chunk, Value value, int line);
-void freeChunk(Chunk* chunk);
+void initChunk(Chunk *chunk);
+void writeChunk(Chunk *chunk, uint8_t byte, int line);
+void writeConstant(Chunk *chunk, Value value, int line);
+void freeChunk(Chunk *chunk);
 
-int addConst(Chunk* chunk, Value value);
+int addConst(Chunk *chunk, Value value);
 
 #endif
