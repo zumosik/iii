@@ -31,3 +31,20 @@ void printValue(Value value)
 {
     printf("%g", AS_NUM(value));
 }
+
+bool valuesEqual(Value a, Value b)
+{
+    if (a.type != b.type)
+        return false;
+    switch (a.type)
+    {
+    case VAL_BOOL:
+        return AS_BOOL(a) == AS_BOOL(b);
+    case VAL_NIL:
+        return true;
+    case VAL_NUM:
+        return AS_NUM(a) == AS_NUM(b);
+    default:
+        return false; // unreachable
+    }
+}

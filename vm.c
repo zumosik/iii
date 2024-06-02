@@ -38,6 +38,11 @@ static Value peek(int distance)
     return vm.stackTop[-1 - distance];
 }
 
+static bool isFalsey(Value value)
+{
+    return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
 static void runtimeError(const char *format, ...)
 {
     va_list args;
@@ -64,8 +69,8 @@ static InterpretResult run()
             runtimeError("Operands must be numbers");   \
             return INTERPRET_RUNTIME_ERROR;             \
         }                                               \
-        double b = AS_NUM(pop());                    \
-        double a = AS_NUM(pop());                    \
+        double b = AS_NUM(pop());                       \
+        double a = AS_NUM(pop());                       \
         push(valType(a op b));                          \
     } while (false)
 
@@ -128,6 +133,20 @@ static InterpretResult run()
             break;
         case OP_DIVIDE:
             BINARY_OP(NUM_VAL, /);
+            break;
+        case OP_EQUAL:
+            Value a = pop();
+            Value b = pop();
+            push(BOOL_VAL(valuesEqual(a, b)));
+            break;
+        case OP_GREATER:
+            BINARY_OP(BOOL_VAL, >);
+            break;
+        case OP_LESS:
+            BINARY_OP(BOOL_VAL, <);
+            break;
+        case OP_NOT:
+            push(BOOL_VAL(isFalsey(pop())));
             break;
         case OP_NEGATE:
             if (!IS_NUMBER(peek(0)))
