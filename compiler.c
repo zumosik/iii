@@ -38,23 +38,6 @@ typedef enum
     PREC_PRIMARY
 } Precedence;
 
-bool compile(const char *source, Chunk *chunk)
-{
-    initScanner(source);
-
-    compilingChunk = chunk;
-    parser.hadError = false;
-    parser.panicMode = false;
-
-    advance();
-    expression();
-    consume(TOKEN_EOF, "Expect end of expression.");
-
-    endCompiler();
-
-    return !parser.hadError;
-}
-
 static void errorAt(Token *token, const char *message)
 {
     if (parser.panicMode)
@@ -130,6 +113,16 @@ static void endCompiler()
     emitByte(OP_RETURN);
 }
 
+static void parsePrecedence(Precedence precedence)
+{
+    // ...
+}
+
+static void expression()
+{
+    parsePrecedence(PREC_ASSIGNMENT);
+}
+
 static void grouping()
 {
     expression();
@@ -163,12 +156,19 @@ static void unary()
     }
 }
 
-static void parsePrecedence(Precedence precedence)
+bool compile(const char *source, Chunk *chunk)
 {
-    // ...
-}
+    initScanner(source);
 
-static void expression()
-{
-    parsePrecedence(PREC_ASSIGNMENT);
+    compilingChunk = chunk;
+    parser.hadError = false;
+    parser.panicMode = false;
+
+    advance();
+    expression();
+    consume(TOKEN_EOF, "Expect end of expression.");
+
+    endCompiler();
+
+    return !parser.hadError;
 }
