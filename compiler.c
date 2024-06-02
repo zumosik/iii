@@ -144,7 +144,7 @@ static void emitConstant(double value)
 static void number()
 {
     double value = strtod(parser.previous.start, NULL);
-    emitConstant(value);
+    emitConstant(NUM_VAL(val));
 }
 
 static void unary()
