@@ -1,5 +1,8 @@
 #include "value.h"
 #include "memory.h"
+#include "stdio.h"
+#include "object.h"
+#include "string.h"
 
 void initValueArray(ValueArray *array)
 {
@@ -29,7 +32,34 @@ void freeValueArray(ValueArray *array)
 
 void printValue(Value value)
 {
-    printf("%g", AS_NUM(value));
+    switch (value.type) {
+        case VAL_OBJ:
+            printObject(value);
+            break;
+        case VAL_NIL:
+            printf("nil");
+            break;
+        case VAL_NUM:
+            printf("%g", AS_NUM(value));
+            break;
+        case VAL_BOOL:
+            printf(AS_BOOL(value) ? "true" : "false");
+            break;
+        default:
+            printf("Unknown value type\n");
+    }
+}
+
+void printObject(Value value)
+{
+    switch (AS_OBJ(value)->type)
+    {
+    case OBJ_STRING:
+        printf("%s", AS_CSTRING(value));
+        break;
+    default:
+        printf("Unknown object type\n");
+    }
 }
 
 bool valuesEqual(Value a, Value b)
@@ -44,6 +74,16 @@ bool valuesEqual(Value a, Value b)
         return true;
     case VAL_NUM:
         return AS_NUM(a) == AS_NUM(b);
+    case VAL_OBJ:
+        if (IS_STRING(a) && IS_STRING(b))
+        {
+            ObjString *aStr = AS_STRING(a);
+            ObjString *bStr = AS_STRING(b);
+            return aStr->length == bStr->length &&
+                   memcmp(aStr->chars, bStr->chars, aStr->length) == 0;
+        }
+
+        return false;
     default:
         return false; // unreachable
     }

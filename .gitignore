@@ -69,3 +69,5 @@ CMakeUserPresets.json
 # Ide files
 .idea/
 .vscode/
+
+cmake-build-debug/
