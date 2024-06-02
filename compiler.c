@@ -4,6 +4,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "scanner.h"
+#include "chunk.h"
 
 Chunk *compilingChunk;
 
@@ -21,6 +22,38 @@ typedef struct
 } Parser;
 
 Parser parser;
+
+typedef enum
+{
+    PREC_NONE,
+    PREC_ASSIGNMENT, // =
+    PREC_OR,         // ||
+    PREC_AND,        // &&
+    PREC_EQUALITY,   // == !=
+    PREC_COMPARISON, // < > <= >=
+    PREC_TERM,       // + -
+    PREC_FACTOR,     // * /
+    PREC_UNARY,      // ! -
+    PREC_CALL,       // . ()
+    PREC_PRIMARY
+} Precedence;
+
+bool compile(const char *source, Chunk *chunk)
+{
+    initScanner(source);
+
+    compilingChunk = chunk;
+    parser.hadError = false;
+    parser.panicMode = false;
+
+    advance();
+    expression();
+    consume(TOKEN_EOF, "Expect end of expression.");
+
+    endCompiler();
+
+    return !parser.hadError;
+}
 
 static void errorAt(Token *token, const char *message)
 {
@@ -97,19 +130,45 @@ static void endCompiler()
     emitByte(OP_RETURN);
 }
 
-bool compile(const char *source, Chunk *chunk)
+static void grouping()
 {
-    initScanner(source);
-
-    compilingChunk = chunk;
-    parser.hadError = false;
-    parser.panicMode = false;
-
-    advance();
     expression();
-    consume(TOKEN_EOF, "Expect end of expression.");
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+}
 
-    endCompiler();
+static void emitConstant(double value)
+{
+    writeConstant(currentChunk(), value, parser.previous.line);
+}
 
-    return !parser.hadError;
+static void number()
+{
+    double value = strtod(parser.previous.start, NULL);
+    emitConstant(value);
+}
+
+static void unary()
+{
+    TokenType operatorType = parser.previous.type;
+
+    parsePrecedence(PREC_UNARY);
+
+    switch (operatorType)
+    {
+    case TOKEN_MINUS:
+        emitByte(OP_NEGATE);
+        break;
+    default:
+        return; // unreachable
+    }
+}
+
+static void parsePrecedence(Precedence precedence)
+{
+    // ...
+}
+
+static void expression()
+{
+    parsePrecedence(PREC_ASSIGNMENT);
 }
