@@ -12,7 +12,7 @@ typedef enum
 
 typedef struct
 {
-    ValueType tyoe;
+    ValueType type;
     union
     {
         bool boolean;
@@ -22,7 +22,7 @@ typedef struct
 
 // Macro stuff
 #define BOOL_VAL(val) ((Value){VAL_BOOL, {.boolean = val}})
-#define NIL_VAL(val) ((Value){VAL_NIL, {.number = 0}})
+#define NIL_VAL ((Value){VAL_NIL, {.number = 0}})
 #define NUM_VAL(val) ((Value){VAL_NUM, {.number = val}})
 
 #define AS_BOOL(val) ((val).as.boolean)
@@ -30,7 +30,7 @@ typedef struct
 
 #define IS_BOOL(value) ((value).type == VAL_BOOL)
 #define IS_NIL(value) ((value).type == VAL_NIL)
-#define IS_NUMBER(value) ((value).type == VAL_NUMBER)
+#define IS_NUMBER(value) ((value).type == VAL_NUM)
 
 typedef struct
 {
