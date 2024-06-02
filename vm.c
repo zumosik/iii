@@ -45,6 +45,11 @@ static InterpretResult run()
         push(a op b);     \
     } while (false)
 
+#ifdef DEBUG_TRACE_EXECUTION
+    printf("\n running... \n");
+
+#endif
+
     for (;;)
     {
 #ifdef DEBUG_TRACE_EXECUTION // enable debug trace if macro is defined
@@ -103,7 +108,7 @@ static InterpretResult run()
 #undef BINARY_OP
 }
 
-InterpretResult interpret(const char* source)
+InterpretResult interpret(const char *source)
 {
     Chunk chunk;
     initChunk(&chunk);
