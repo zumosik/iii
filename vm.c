@@ -17,10 +17,12 @@ static void resetStack()
 void initVM()
 {
     resetStack();
+    vm.objects = NULL;
 }
 
 void freeVM()
 {
+    freeObjects(); // free all objects 
 }
 
 void push(Value value)
