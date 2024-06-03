@@ -50,7 +50,6 @@ static void adjustCapacity(Table *table, int capacity) {
     // re-insert all the entries without the tombstones
     table->count = 0;
 
-
     for (int i = 0; i < capacity; i++) {
         entries[i].key = NULL;
         entries[i].value = NIL_VAL;
@@ -59,9 +58,9 @@ static void adjustCapacity(Table *table, int capacity) {
     // rebuilding the table from scratch by re-inserting
     // every entry into the new empty array
     for (int i = 0; i < table->capacity; i++) {
-        Entry* entry = &table->entries[i];
+        Entry *entry = &table->entries[i];
         if (entry->key == NULL) continue;
-        Entry* dest = findEntry(entries, capacity, entry->key);
+        Entry *dest = findEntry(entries, capacity, entry->key);
         dest->key = entry->key;
         dest->value = entry->value;
         table->count++;
@@ -119,4 +118,25 @@ bool tableSet(Table *table, ObjString *key, Value value) {
     entry->key = key;
     entry->value = value;
     return isNewKey;
+}
+
+ObjString *tableFindString(Table *table, const char *chars,
+                           int length, uint32_t hash) {
+    if (table->count == 0) return NULL;
+    uint32_t index = hash % table->capacity;
+    for (;;) {
+        Entry *entry = &table->entries[index];
+        if (entry->key == NULL) {
+            //  empty non-tombstone entry.
+            if (IS_NIL(entry->value)) return NULL;
+        } else if (
+                entry->key->length == length &&
+                entry->key->hash == hash &&
+                memcmp(entry->key->chars,
+                       chars, length) == 0) {
+            // found
+            return entry->key;
+        }
+        index = (index + 1) % table->capacity;
+    }
 }

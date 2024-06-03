@@ -4,17 +4,14 @@
 #include "object.h"
 #include "string.h"
 
-void initValueArray(ValueArray *array)
-{
+void initValueArray(ValueArray *array) {
     array->values = NULL;
     array->capacity = 0;
     array->count = 0;
 }
 
-void writeValueArray(ValueArray *array, Value value)
-{
-    if (array->capacity < array->count + 1)
-    {
+void writeValueArray(ValueArray *array, Value value) {
+    if (array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
         array->capacity = GROW_CAPACITY(oldCapacity);
         array->values = GROW_ARRAY(Value, array->values,
@@ -24,14 +21,12 @@ void writeValueArray(ValueArray *array, Value value)
     array->count++;
 }
 
-void freeValueArray(ValueArray *array)
-{
+void freeValueArray(ValueArray *array) {
     FREE_ARRAY(Value, array->values, array->capacity);
     initValueArray(array);
 }
 
-void printValue(Value value)
-{
+void printValue(Value value) {
     switch (value.type) {
         case VAL_OBJ:
             printObject(value);
@@ -50,41 +45,29 @@ void printValue(Value value)
     }
 }
 
-void printObject(Value value)
-{
-    switch (AS_OBJ(value)->type)
-    {
-    case OBJ_STRING:
-        printf("%s", AS_CSTRING(value));
-        break;
-    default:
-        printf("Unknown object type\n");
+void printObject(Value value) {
+    switch (AS_OBJ(value)->type) {
+        case OBJ_STRING:
+            printf("%s", AS_CSTRING(value));
+            break;
+        default:
+            printf("Unknown object type\n");
     }
 }
 
-bool valuesEqual(Value a, Value b)
-{
+bool valuesEqual(Value a, Value b) {
     if (a.type != b.type)
         return false;
-    switch (a.type)
-    {
-    case VAL_BOOL:
-        return AS_BOOL(a) == AS_BOOL(b);
-    case VAL_NIL:
-        return true;
-    case VAL_NUM:
-        return AS_NUM(a) == AS_NUM(b);
-    case VAL_OBJ:
-        if (IS_STRING(a) && IS_STRING(b))
-        {
-            ObjString *aStr = AS_STRING(a);
-            ObjString *bStr = AS_STRING(b);
-            return aStr->length == bStr->length &&
-                   memcmp(aStr->chars, bStr->chars, aStr->length) == 0;
-        }
-
-        return false;
-    default:
-        return false; // unreachable
+    switch (a.type) {
+        case VAL_BOOL:
+            return AS_BOOL(a) == AS_BOOL(b);
+        case VAL_NIL:
+            return true;
+        case VAL_NUM:
+            return AS_NUM(a) == AS_NUM(b);
+        case VAL_OBJ:
+            return AS_OBJ(a) == AS_OBJ(b);
+        default:
+            return false; // unreachable
     }
 }

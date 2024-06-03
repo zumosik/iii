@@ -18,11 +18,13 @@ void initVM()
 {
     resetStack();
     vm.objects = NULL;
+    initTable(&vm.strings);
 }
 
 void freeVM()
 {
-    freeObjects(); // free all objects 
+    freeObjects(); // free all objects
+    freeTable(&vm.strings);
 }
 
 void push(Value value)
