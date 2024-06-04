@@ -62,17 +62,18 @@ static void runtimeError(const char *format, ...)
     resetStack();
 }
 
-static void concatenate() {
-    ObjString* b = AS_STRING(pop());
-    ObjString* a = AS_STRING(pop());
+static void concatenate()
+{
+    ObjString *b = AS_STRING(pop());
+    ObjString *a = AS_STRING(pop());
 
     int length = a->length + b->length;
-    char* chars = ALLOCATE(char, length + 1);
+    char *chars = ALLOCATE(char, length + 1);
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
 
-    ObjString* result = takeString(chars, length);
+    ObjString *result = takeString(chars, length);
     push(OBJ_VAL(result));
 }
 
@@ -136,20 +137,22 @@ static InterpretResult run()
             break;
         case OP_RETURN:
         {
-            printf("--------------------------------\n");
-            printf("Result (return): ");
-            printValue(pop());
-            printf("\n");
             return INTERPRET_OK;
         }
-        case OP_ADD: {
-            if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+        case OP_ADD:
+        {
+            if (IS_STRING(peek(0)) && IS_STRING(peek(1)))
+            {
                 concatenate();
-            } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+            }
+            else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1)))
+            {
                 double b = AS_NUM(pop());
                 double a = AS_NUM(pop());
                 push(NUM_VAL(a + b));
-            } else {
+            }
+            else
+            {
                 runtimeError("Operands must be two numbers or two strings.");
                 return INTERPRET_RUNTIME_ERROR;
             }
@@ -179,6 +182,7 @@ static InterpretResult run()
             push(BOOL_VAL(isFalsey(pop())));
             break;
         case OP_NEGATE:
+        {
             if (!IS_NUMBER(peek(0)))
             {
                 runtimeError("Operand must be a number");
@@ -188,6 +192,14 @@ static InterpretResult run()
             push(NUM_VAL(-AS_NUM(pop())));
 
             break;
+        }
+        case OP_PRINT:
+        {
+            printf("\n==================\n");
+            printValue(pop());
+            printf("\n==================\n");
+            break;
+        }
         }
     }
 

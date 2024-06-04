@@ -21,6 +21,8 @@ typedef enum
     OP_DIVIDE,
     OP_NOT,
     OP_RETURN,
+
+    OP_PRINT, // FIXME: shouldn't be opcode
 } OpCode;
 
 typedef struct
