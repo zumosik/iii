@@ -109,6 +109,22 @@ static void endCompiler()
 #endif
 }
 
+static bool check(TokenType type)
+{
+    return parser.current.type == type;
+}
+
+static bool match(TokenType type)
+{
+    if (!check(type))
+        return false;
+    advance();
+    return true;
+}
+
+
+
+
 static void parsePrecedence(Precedence precedence)
 {
     advance();
@@ -119,13 +135,19 @@ static void parsePrecedence(Precedence precedence)
         return;
     }
 
-    prefixFn();
+    bool canAssign = precedence <= PREC_ASSIGNMENT;
+    prefixFn(canAssign);
 
     while (precedence <= getRule(parser.current.type)->precedence)
     {
         advance();
         ParseFn infixFn = getRule(parser.previous.type)->infix;
-        infixFn();
+        infixFn(canAssign);
+    }
+
+    if (canAssign && match(TOKEN_EQUAL))
+    {
+        error("Invalid assignment target.");
     }
 }
 
@@ -140,18 +162,8 @@ static uint8_t identifierConstant(Token *name)
                                            name->length)));
 }
 
-static bool check(TokenType type)
-{
-    return parser.current.type == type;
-}
 
-static bool match(TokenType type)
-{
-    if (!check(type))
-        return false;
-    advance();
-    return true;
-}
+
 
 static void expression()
 {
@@ -255,7 +267,7 @@ static void statement()
     }
 }
 
-static void grouping()
+static void grouping(bool canAssign)
 {
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
@@ -266,13 +278,13 @@ static void emitConstant(Value value)
     writeConstant(currentChunk(), value, parser.previous.line);
 }
 
-static void number()
+static void number(bool canAssign)
 {
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUM_VAL(value));
 }
 
-static void unary()
+static void unary(bool canAssign)
 {
     TokenType operatorType = parser.previous.type;
 
@@ -291,7 +303,7 @@ static void unary()
     }
 }
 
-static void binary()
+static void binary(bool canAssign)
 {
     TokenType operatorType = parser.previous.type;
     ParseRule *rule = getRule(operatorType);
@@ -333,7 +345,7 @@ static void binary()
     }
 }
 
-static void literal()
+static void literal(bool canAssign)
 {
     switch (parser.previous.type)
     {
@@ -351,7 +363,7 @@ static void literal()
     }
 }
 
-static void string()
+static void string(bool canAssign)
 {
     emitConstant(OBJ_VAL(
         copyString(
@@ -359,11 +371,11 @@ static void string()
             parser.previous.length - 2)));
 }
 
-static void namedVar(Token name)
+static void namedVar(Token name, bool canAssign)
 {
     uint8_t arg = identifierConstant(&name);
 
-    if (match(TOKEN_EQUAL)) // x = ...
+    if (canAssign && match(TOKEN_EQUAL)) // x = ...
     {
         expression();
         emitBytes(OP_SET_GLOBAL, arg);
@@ -374,9 +386,9 @@ static void namedVar(Token name)
     }
 }
 
-static void variable()
+static void variable(bool canAssign)
 {
-    namedVar(parser.previous);
+    namedVar(parser.previous, canAssign);
 }
 
 ParseRule rules[] = {
