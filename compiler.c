@@ -115,7 +115,7 @@ static void parsePrecedence(Precedence precedence)
     ParseFn prefixFn = getRule(parser.previous.type)->prefix;
     if (prefixFn == NULL)
     {
-        error("Expected expression");
+        error("Expect expression");
         return;
     }
 
@@ -129,11 +129,21 @@ static void parsePrecedence(Precedence precedence)
     }
 }
 
+static uint8_t makeConstant(Value val)
+{
+    return (uint32_t)addConst(currentChunk(), val);
+}
+
+static uint8_t identifierConstant(Token *name)
+{
+    return makeConstant(OBJ_VAL(copyString(name->start,
+                                           name->length)));
+}
+
 static bool check(TokenType type)
 {
     return parser.current.type == type;
 }
-
 
 static bool match(TokenType type)
 {
@@ -143,21 +153,87 @@ static bool match(TokenType type)
     return true;
 }
 
-
 static void expression()
 {
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
-static void expressionStatement() {
+static void expressionStatement()
+{
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
     emitByte(OP_POP);
 }
 
+static uint8_t parseVar(const char *errorMessage)
+{
+    consume(TOKEN_IDENTIFIER, errorMessage);
+    return identifierConstant(&parser.previous);
+}
+
+static void defineVar(uint32_t global)
+{
+    emitBytes(OP_DEFINE_GLOBAL, global);
+}
+
+static void varDeclaration()
+{
+    uint8_t global = parseVar("Expect variable name.");
+
+    if (match(TOKEN_EQUAL))
+    {
+        expression();
+    }
+    else
+    {
+        emitByte(OP_NIL);
+    }
+
+    consume(TOKEN_SEMICOLON, "Expect ';' after variable name");
+
+    defineVar(global);
+}
+
+static void synchronize()
+{
+    parser.panicMode = false;
+
+    while (parser.current.type != TOKEN_EOF)
+    {
+        if (parser.previous.type == TOKEN_SEMICOLON)
+            return;
+        switch (parser.current.type)
+        {
+        case TOKEN_CLASS:
+        case TOKEN_VAR:
+        case TOKEN_FOR:
+        case TOKEN_IF:
+        case TOKEN_WHILE:
+        case TOKEN_RETURN:
+            return;
+        default:
+            // Do nothing.
+            ;
+        }
+        advance();
+    }
+}
+
 static void declaration()
 {
-    statement();
+    if (match(TOKEN_VAR))
+    {
+        varDeclaration();
+    }
+    else
+    {
+        statement();
+    }
+
+    if (parser.panicMode)
+    {
+        synchronize();
+    }
 }
 
 static void printStatement()
@@ -172,7 +248,9 @@ static void statement()
     if (match(TOKEN_FOR)) // FIXME: for now FOR works as print
     {
         printStatement();
-    } else {
+    }
+    else
+    {
         expressionStatement();
     }
 }

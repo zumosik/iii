@@ -22,6 +22,7 @@ typedef enum
     OP_NOT,
     OP_RETURN,
     OP_POP,
+    OP_DEFINE_GLOBAL,
 
     OP_PRINT, // FIXME: shouldn't be opcode
 } OpCode;
