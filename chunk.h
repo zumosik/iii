@@ -21,6 +21,7 @@ typedef enum
     OP_DIVIDE,
     OP_NOT,
     OP_RETURN,
+    OP_POP,
 
     OP_PRINT, // FIXME: shouldn't be opcode
 } OpCode;

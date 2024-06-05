@@ -149,6 +149,12 @@ static void expression()
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
+static void expressionStatement() {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+    emitByte(OP_POP);
+}
+
 static void declaration()
 {
     statement();
@@ -166,6 +172,8 @@ static void statement()
     if (match(TOKEN_FOR)) // FIXME: for now FOR works as print
     {
         printStatement();
+    } else {
+        expressionStatement();
     }
 }
 

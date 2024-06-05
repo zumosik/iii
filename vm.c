@@ -200,6 +200,9 @@ static InterpretResult run()
             printf("\n==================\n");
             break;
         }
+        case OP_POP:
+            pop();
+            break;
         }
     }
 
