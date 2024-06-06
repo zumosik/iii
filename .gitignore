@@ -65,9 +65,11 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+cmake-build-debug/
 
 # Ide files
 .idea/
 .vscode/
 
-cmake-build-debug/
+# Some util code
+*.py

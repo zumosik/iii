@@ -8,23 +8,32 @@ typedef enum
 {
     OP_CONSTANT,
     OP_CONSTANT_LONG,
+
+    OP_DEFINE_GLOBAL,
+    OP_GET_GLOBAL,
+    OP_SET_GLOBAL,
+    OP_DEFINE_GLOBAL_LONG,
+    OP_GET_GLOBAL_LONG,
+    OP_SET_GLOBAL_LONG,
+
     OP_NIL,
     OP_TRUE,
     OP_FALSE,
+
+    OP_NOT,
     OP_EQUAL,
     OP_GREATER,
     OP_LESS,
+
     OP_NEGATE,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
-    OP_NOT,
+
     OP_RETURN,
+
     OP_POP,
-    OP_DEFINE_GLOBAL,
-    OP_GET_GLOBAL,
-OP_SET_GLOBAL,
 
     OP_PRINT, // FIXME: shouldn't be opcode
 } OpCode;

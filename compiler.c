@@ -122,9 +122,6 @@ static bool match(TokenType type)
     return true;
 }
 
-
-
-
 static void parsePrecedence(Precedence precedence)
 {
     advance();
@@ -151,19 +148,16 @@ static void parsePrecedence(Precedence precedence)
     }
 }
 
-static uint8_t makeConstant(Value val)
+static uint16_t makeConstant(Value val)
 {
-    return (uint32_t)addConst(currentChunk(), val);
+    return (uint16_t)addConst(currentChunk(), val);
 }
 
-static uint8_t identifierConstant(Token *name)
+static uint16_t identifierConstant(Token *name)
 {
     return makeConstant(OBJ_VAL(copyString(name->start,
                                            name->length)));
 }
-
-
-
 
 static void expression()
 {
@@ -177,20 +171,28 @@ static void expressionStatement()
     emitByte(OP_POP);
 }
 
-static uint8_t parseVar(const char *errorMessage)
+static uint16_t parseVar(const char *errorMessage)
 {
     consume(TOKEN_IDENTIFIER, errorMessage);
     return identifierConstant(&parser.previous);
 }
 
-static void defineVar(uint32_t global)
+static void defineVar(uint16_t global)
 {
-    emitBytes(OP_DEFINE_GLOBAL, global);
+    if (global < 256)
+    {
+        emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
+    }
+    else
+    {
+        emitByte(OP_DEFINE_GLOBAL_LONG);
+        emitBytes((global >> 8) & 0xff, global & 0xff);
+    }
 }
 
 static void varDeclaration()
 {
-    uint8_t global = parseVar("Expect variable name.");
+    uint16_t global = parseVar("Expect variable name.");
 
     if (match(TOKEN_EQUAL))
     {
@@ -373,16 +375,32 @@ static void string(bool canAssign)
 
 static void namedVar(Token name, bool canAssign)
 {
-    uint8_t arg = identifierConstant(&name);
+    uint16_t arg = identifierConstant(&name);
 
     if (canAssign && match(TOKEN_EQUAL)) // x = ...
     {
         expression();
-        emitBytes(OP_SET_GLOBAL, arg);
+        if (arg < 256)
+        {
+            emitBytes(OP_SET_GLOBAL, arg);
+        }
+        else
+        {
+            emitByte(OP_SET_GLOBAL_LONG);
+            emitBytes((arg >> 8) & 0xff, arg & 0xff);
+        }
     }
     else
     {
-        emitBytes(OP_GET_GLOBAL, arg);
+        if (arg < 256)
+        {
+            emitBytes(OP_GET_GLOBAL, arg);
+        }
+        else
+        {
+            emitByte(OP_GET_GLOBAL_LONG);
+            emitBytes((arg >> 8) & 0xff, arg & 0xff);
+        }
     }
 }
 

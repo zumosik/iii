@@ -29,11 +29,13 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 void writeConstant(Chunk* chunk, Value value, int line) {
     int index = addConst(chunk, value);
     if (index < 256) {
+        printf("\n< 256\n");
+
         writeChunk(chunk, OP_CONSTANT, line);
         writeChunk(chunk, index, line);
     } else {
+        printf("\n> 256\n");
         writeChunk(chunk, OP_CONSTANT_LONG, line);
-        writeChunk(chunk, (index >> 16) & 0xff, line);
         writeChunk(chunk, (index >> 8) & 0xff, line);
         writeChunk(chunk, index & 0xff, line);
     }
