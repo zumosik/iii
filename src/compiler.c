@@ -439,7 +439,7 @@ static void ifStatement()
 
 static void statement()
 {
-    if (match(TOKEN_FOR)) // FIXME: for now FOR works as print
+    if (match(TOKEN_PRINT)) 
     {
         printStatement();
     }

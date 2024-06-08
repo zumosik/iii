@@ -44,7 +44,9 @@ typedef enum
     TOKEN_VAR,
     TOKEN_WHILE,
     TOKEN_ERROR,
-    TOKEN_EOF
+    TOKEN_EOF,
+
+    TOKEN_PRINT, // FIXME: should be just a func
 } TokenType;
 
 typedef struct
