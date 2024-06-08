@@ -16,6 +16,11 @@ typedef enum
     OP_GET_GLOBAL_LONG,
     OP_SET_GLOBAL_LONG,
 
+    OP_GET_LOCAL,
+    OP_SET_LOCAL,
+    OP_SET_LOCAL_LONG,
+    OP_GET_LOCAL_LONG,
+
     OP_NIL,
     OP_TRUE,
     OP_FALSE,

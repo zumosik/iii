@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "common.h"
 #include "compiler.h"
 #include "scanner.h"
 #include "chunk.h"
 #include "object.h"
+#include "locals.h"
 
 Chunk *compilingChunk;
 
@@ -23,6 +25,21 @@ typedef struct
 } Parser;
 
 Parser parser;
+
+typedef struct
+{
+    LocalsArray locals;
+    int scopeDepth;
+} Compiler;
+
+Compiler *current = NULL;
+
+static void initCompiler(Compiler *compiler)
+{
+    initLocalsArray(&compiler->locals);
+    compiler->scopeDepth = 0;
+    current = compiler;
+}
 
 static void errorAt(Token *token, const char *message)
 {
@@ -96,6 +113,7 @@ static void emitBytes(uint8_t byte1, uint8_t byte2)
 
 static void endCompiler()
 {
+
     emitByte(OP_RETURN);
 
 #ifdef DEBUG_PRINT_CODE
@@ -107,6 +125,26 @@ static void endCompiler()
         disassembleChunk(currentChunk(), "code");
     }
 #endif
+
+    freeLocalsArray(&current->locals);
+}
+
+static void beginScope()
+{
+    current->scopeDepth++;
+}
+
+static void endScope()
+{
+    current->scopeDepth--;
+
+    while (current->locals.count > 0 &&
+           current->locals.values[current->locals.count - 1].depth >
+               current->scopeDepth)
+    {
+        emitByte(OP_POP);
+        current->locals.count--;
+    }
 }
 
 static bool check(TokenType type)
@@ -159,9 +197,75 @@ static uint16_t identifierConstant(Token *name)
                                            name->length)));
 }
 
+static bool identifiersEqual(Token *a, Token *b)
+{
+    if (a->length != b->length)
+        return false;
+    return memcmp(a->start, b->start, a->length) == 0;
+}
+
+static int resolveLocal(Compiler *compiler, Token *name)
+{
+    for (int i = compiler->locals.count - 1; i >= 0; i--)
+    {
+        Local *local = &compiler->locals.values[i];
+        if (identifiersEqual(name, &local->name))
+        {
+            if (local->depth == -1)
+            {
+                error("Can't read local variable in its own initializer.");
+            }
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+static void addLocal(Token name)
+{
+    Local local;
+    local.depth = -1;
+    local.name = name;
+    writeLocalsArray(&current->locals, local);
+}
+
+static void declareVar()
+{
+    // Globals are implicitly declared
+    if (current->scopeDepth == 0)
+        return;
+
+    Token *name = &parser.previous;
+
+    for (int i = current->locals.count - 1; i >= 0; i--)
+    {
+        Local *local = &current->locals.values[i];
+        if (local->depth != -1 && local->depth < current->scopeDepth)
+        {
+            break;
+        }
+        if (identifiersEqual(name, &local->name))
+        {
+            error("Here is already variable with this name in this scope");
+        }
+    }
+
+    addLocal(*name);
+}
+
 static void expression()
 {
     parsePrecedence(PREC_ASSIGNMENT);
+}
+
+static void block()
+{
+    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
+    {
+        declaration();
+    }
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
 static void expressionStatement()
@@ -174,11 +278,27 @@ static void expressionStatement()
 static uint16_t parseVar(const char *errorMessage)
 {
     consume(TOKEN_IDENTIFIER, errorMessage);
+
+    declareVar();
+    if (current->scopeDepth > 0)
+        return 0;
+
     return identifierConstant(&parser.previous);
+}
+
+static void markInitialized()
+{
+    current->locals.values[current->locals.count - 1].depth = current->scopeDepth;
 }
 
 static void defineVar(uint16_t global)
 {
+    if (current->scopeDepth > 0)
+    {
+        markInitialized();
+        return;
+    }
+
     if (global < 256)
     {
         emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
@@ -262,6 +382,12 @@ static void statement()
     if (match(TOKEN_FOR)) // FIXME: for now FOR works as print
     {
         printStatement();
+    }
+    else if (match(TOKEN_LEFT_BRACE))
+    {
+        beginScope();
+        block();
+        endScope();
     }
     else
     {
@@ -375,31 +501,67 @@ static void string(bool canAssign)
 
 static void namedVar(Token name, bool canAssign)
 {
-    uint16_t arg = identifierConstant(&name);
+    uint16_t arg;
+    uint8_t getOp, setOp;
+    bool isLong;
+
+    int argLocal = resolveLocal(current, &name);
+    if (argLocal > -1)
+    {
+        arg = (uint16_t)argLocal;
+        if (arg < 256)
+        {
+            isLong = false;
+            getOp = OP_GET_LOCAL;
+            setOp = OP_SET_LOCAL;
+        }
+        else
+        {
+            isLong = true;
+            getOp = OP_GET_LOCAL_LONG;
+            setOp = OP_SET_LOCAL_LONG;
+        }
+    }
+    else
+    { // global var
+        arg = identifierConstant(&name);
+        if (arg < 256)
+        {
+            isLong = false;
+            getOp = OP_GET_GLOBAL;
+            setOp = OP_SET_GLOBAL;
+        }
+        else
+        {
+            isLong = true;
+            getOp = OP_GET_GLOBAL_LONG;
+            setOp = OP_SET_GLOBAL_LONG;
+        }
+    }
 
     if (canAssign && match(TOKEN_EQUAL)) // x = ...
     {
         expression();
-        if (arg < 256)
+        if (isLong)
         {
-            emitBytes(OP_SET_GLOBAL, arg);
+            emitByte(setOp);
+            emitBytes((arg >> 8) & 0xff, arg & 0xff);
         }
         else
         {
-            emitByte(OP_SET_GLOBAL_LONG);
-            emitBytes((arg >> 8) & 0xff, arg & 0xff);
+            emitBytes(setOp, (uint8_t)arg);
         }
     }
     else
     {
-        if (arg < 256)
+        if (isLong)
         {
-            emitBytes(OP_GET_GLOBAL, arg);
+            emitByte(getOp);
+            emitBytes((arg >> 8) & 0xff, arg & 0xff);
         }
         else
         {
-            emitByte(OP_GET_GLOBAL_LONG);
-            emitBytes((arg >> 8) & 0xff, arg & 0xff);
+            emitBytes(getOp, (uint8_t)arg);
         }
     }
 }
@@ -458,6 +620,8 @@ static ParseRule *getRule(TokenType type)
 bool compile(const char *source, Chunk *chunk)
 {
     initScanner(source);
+    Compiler compiler;
+    initCompiler(&compiler);
 
     compilingChunk = chunk;
     parser.hadError = false;

@@ -87,6 +87,7 @@ static void undefinedVarError(ObjString *name)
 static InterpretResult run()
 {
 #define READ_BYTE() (*vm.ip++)
+#define READ_BYTE_LONG() ((READ_BYTE() << 8) | READ_BYTE())
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_CONSTANT_LONG() (vm.chunk->constants.values[(READ_BYTE() << 8) | READ_BYTE()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
@@ -104,10 +105,7 @@ static InterpretResult run()
         push(valType(a op b));                          \
     } while (false)
 
-#ifdef DEBUG_TRACE_EXECUTION
     printf("\n running... \n");
-
-#endif
 
     for (;;)
     {
@@ -244,7 +242,7 @@ static InterpretResult run()
 
             break;
         }
-         case OP_DEFINE_GLOBAL_LONG:
+        case OP_DEFINE_GLOBAL_LONG:
         {
             ObjString *name = READ_STRING_LONG();
             tableSet(&vm.globals, name, peek(0));
@@ -276,10 +274,35 @@ static InterpretResult run()
 
             break;
         }
+        case OP_GET_LOCAL:
+        {
+            uint8_t slot = READ_BYTE();
+            push(vm.stack[slot]);
+            break;
+        }
+        case OP_SET_LOCAL:
+        {
+            uint8_t slot = READ_BYTE();
+            vm.stack[slot] = peek(0);
+            break;
+        }
+        case OP_GET_LOCAL_LONG:
+        {
+            uint16_t slot = READ_BYTE_LONG();
+            push(vm.stack[slot]);
+            break;
+        }
+        case OP_SET_LOCAL_LONG:
+        {
+            uint16_t slot = READ_BYTE();
+            vm.stack[slot] = peek(0);
+            break;
+        }
         }
     }
 
 #undef READ_BYTE
+#undef READ_BYTE_LONG
 #undef READ_CONSTANT
 #undef READ_CONSTANT_LONG
 #undef READ_STRING
@@ -297,6 +320,8 @@ InterpretResult interpret(const char *source)
         freeChunk(&chunk);
         return INTERPRET_COMPILE_ERROR;
     }
+
+    printf("Compile end \n");
 
     vm.chunk = &chunk;
     vm.ip = vm.chunk->code;

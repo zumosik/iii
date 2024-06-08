@@ -6,6 +6,8 @@
 void disassembleChunk(Chunk *chunk, const char *name)
 {
     printf("== %s ==\n", name);
+    printf("length: %d\n", chunk->count);
+    printf("\n");
 
     for (int offset = 0; offset < chunk->count;)
     {
@@ -76,6 +78,14 @@ int disassembleInstruction(Chunk *chunk, int offset)
         return longConstantInstruction("OP_SET_GLOBAL_LONG", chunk, offset);
     case OP_DEFINE_GLOBAL_LONG:
         return longConstantInstruction("OP_DEFINE_GLOBAL_LONG", chunk, offset);
+    case OP_GET_LOCAL:
+        return byteInstruction("OP_GET_LOCAL", chunk, offset);
+    case OP_SET_LOCAL:
+        return byteInstruction("OP_SET_LOCAL", chunk, offset);
+    case OP_GET_LOCAL_LONG:
+        return byteInstructionLong("OP_GET_LOCAL_LONG", chunk, offset);
+    case OP_SET_LOCAL_LONG:
+        return byteInstructionLong("OP_SET_LOCAL_LONG", chunk, offset);
     default:
         printf("Unknown opcode %d\n", instruction);
         return offset + 1;
@@ -86,6 +96,21 @@ int simpleInstruction(const char *name, int offset)
 {
     printf("%s\n", name);
     return offset + 1;
+}
+
+ int byteInstruction(const char *name, Chunk *chunk, int offset)
+{
+    uint8_t slot = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
+}
+
+int byteInstructionLong(const char *name, Chunk *chunk, int offset)
+{
+    uint16_t slot = (chunk->code[offset + 1] << 8) |
+                    chunk->code[offset + 2];
+    printf("%-16s %6d\n", name, slot);
+    return offset + 3;
 }
 
 int longConstantInstruction(const char *name, Chunk *chunk, int offset)
