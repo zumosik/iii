@@ -392,6 +392,24 @@ static void patchJump(int offset)
     currentChunk()->code[offset + 1] = jump & 0xff;
 }
 
+static void and_(bool canAssign)
+{
+    int endJump = emitJump(OP_JUMP_FALSE);
+    emitByte(OP_POP);
+    parsePrecedence(PREC_AND);
+    patchJump(endJump);
+}
+
+static void or_(bool canAssign)
+{
+    int elseJump = emitJump(OP_JUMP_FALSE);
+    int endJump = emitJump(OP_JUMP);
+    patchJump(elseJump);
+    emitByte(OP_POP);
+    parsePrecedence(PREC_OR);
+    patchJump(endJump);
+}
+
 static void printStatement()
 {
     expression();
@@ -640,14 +658,14 @@ ParseRule rules[] = {
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
-    [TOKEN_AND] = {NULL, NULL, PREC_NONE},
+    [TOKEN_AND] = {NULL, and_, PREC_AND},
     [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
-    [TOKEN_OR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_OR] = {NULL, or_, PREC_OR},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
     [TOKEN_THIS] = {NULL, NULL, PREC_NONE},
