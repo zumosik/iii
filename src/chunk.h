@@ -40,6 +40,9 @@ typedef enum
 
     OP_POP,
 
+    OP_JUMP_FALSE,
+    OP_JUMP,
+
     OP_PRINT, // FIXME: shouldn't be opcode
 } OpCode;
 
