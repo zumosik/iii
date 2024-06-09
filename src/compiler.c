@@ -495,8 +495,6 @@ static void forStatement()
         emitByte(OP_POP);
     }
 
-    consume(TOKEN_SEMICOLON, "Expect ';'");
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses");
 
     // increment clause
     if (!match(TOKEN_RIGHT_PAREN))
@@ -524,7 +522,7 @@ static void forStatement()
     endScope();
 }
 
-static void forStatement()
+static void statement()
 {
     if (match(TOKEN_PRINT)) 
     {
