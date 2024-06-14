@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include "object.h"
 #include "string.h"
+#include "object.h"
 
 void initValueArray(ValueArray *array) {
     array->values = NULL;
@@ -45,15 +46,6 @@ void printValue(Value value) {
     }
 }
 
-void printObject(Value value) {
-    switch (AS_OBJ(value)->type) {
-        case OBJ_STRING:
-            printf("%s", AS_CSTRING(value));
-            break;
-        default:
-            printf("Unknown object type\n");
-    }
-}
 
 bool valuesEqual(Value a, Value b) {
     if (a.type != b.type)
