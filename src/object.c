@@ -84,9 +84,14 @@ ObjFunc *newFunction()
     return func;
 }
 
-static void printFunc(ObjFunc *function)
+static void printFunc(ObjFunc *func)
 {
-    printf("<fn %s>", function->name->chars);
+    if (func->name == NULL)
+    {
+        printf("<script>");
+        return;
+    }
+    printf("<fn %s>", func->name->chars);
 }
 
 void printObject(Value value)

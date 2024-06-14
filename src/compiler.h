@@ -3,7 +3,7 @@
 
 #include "chunk.h"
 #include "scanner.h"
-
+#include "object.h"
 
 typedef enum
 {
@@ -29,7 +29,7 @@ typedef struct
     Precedence precedence;
 } ParseRule;
 
-bool compile(const char* source, Chunk* chunk);
+ObjFunc *compile(const char *source);
 static ParseRule *getRule(TokenType type);
 static void statement();
 static void declaration();
