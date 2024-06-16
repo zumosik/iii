@@ -47,7 +47,6 @@ typedef enum
 
     OP_LOOP, // works like jump but with negative offset
 
-    OP_PRINT, // FIXME: shouldn't be opcode
 } OpCode;
 
 typedef struct

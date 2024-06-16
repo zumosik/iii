@@ -7,28 +7,33 @@
 #include "object.h"
 #include "memory.h"
 #include "compiler.h"
+#include "time.h"
 
 VM vm;
+
+// TODO: more native functions
+
+// Native functions:
+
+static Value clockNative(int argCount, Value *args)
+{
+    return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+static Value printNative(int argCount, Value *args)
+{
+    for (int i = 0; i < argCount; i++)
+    {
+        printValue(args[i]);
+    }
+    printf("\n");
+    return NIL_VAL;
+}
 
 static void resetStack()
 {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
-}
-
-void initVM()
-{
-    resetStack();
-    vm.objects = NULL;
-    initTable(&vm.strings);
-    initTable(&vm.globals);
-}
-
-void freeVM()
-{
-    freeObjects(); // free all objects
-    freeTable(&vm.strings);
-    freeTable(&vm.globals);
 }
 
 void push(Value value)
@@ -75,6 +80,36 @@ static void runtimeError(const char *format, ...)
     resetStack();
 }
 
+static void defineNative(const char *name, NativeFn function)
+{
+    // pushing and popping to ensure that the function is not collected by the GC
+    push(OBJ_VAL(copyString(name, (int)strlen(name))));
+    push(OBJ_VAL(newNative(function)));
+    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    pop();
+    pop();
+}
+
+
+void initVM()
+{
+    resetStack();
+    vm.objects = NULL;
+    initTable(&vm.strings);
+    initTable(&vm.globals);
+
+    defineNative("clock", clockNative);
+    defineNative("print", printNative);
+}
+
+void freeVM()
+{
+    freeObjects(); // free all objects
+    freeTable(&vm.strings);
+    freeTable(&vm.globals);
+}
+
+
 static bool call(ObjFunc *function, int argCount)
 {
     if (argCount != function->arity)
@@ -104,6 +139,14 @@ static bool callValue(Value callee, int argCount)
         {
         case OBJ_FUNCTION:
             return call(AS_FUNCTION(callee), argCount);
+        case OBJ_NATIVE:
+        {
+            NativeFn native = AS_NATIVE(callee);
+            Value result = native(argCount, vm.stackTop - argCount);
+            vm.stackTop -= argCount + 1;
+            push(result);
+            return true;
+        }
         default:
             break;
         }
@@ -265,13 +308,6 @@ static InterpretResult run()
 
             push(NUM_VAL(-AS_NUM(pop())));
 
-            break;
-        }
-        case OP_PRINT:
-        {
-            printf("\n==================\n");
-            printValue(pop());
-            printf("\n==================\n");
             break;
         }
         case OP_POP:

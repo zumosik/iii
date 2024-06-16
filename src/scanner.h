@@ -47,7 +47,6 @@ typedef enum
     TOKEN_EOF,
     TOKEN_FN,
 
-    TOKEN_PRINT, // FIXME: should be just a func
 } TokenType;
 
 typedef struct

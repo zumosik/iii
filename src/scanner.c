@@ -220,8 +220,6 @@ static TokenType identType()
         return checkKeyword(1, 2, "ar", TOKEN_VAR);
     case 'w':
         return checkKeyword(1, 4, "hile", TOKEN_WHILE);
-    case 'p':
-        return checkKeyword(1,4, "rint", TOKEN_PRINT);
     }
 
     return TOKEN_IDENTIFIER;
