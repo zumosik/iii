@@ -107,6 +107,9 @@ void printObject(Value value)
     case OBJ_NATIVE:
         printf("<native fn>");
         break;
+    case OBJ_CLOSURE:
+        printFunc(AS_CLOSURE(value)->function);
+        break;
     default:
         printf("Unknown object type\n");
     }
@@ -117,4 +120,11 @@ ObjNative *newNative(NativeFn function)
     ObjNative *native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
     native->function = function;
     return native;
+}
+
+ObjClosure *newClosure(ObjFunc *function)
+{
+    ObjClosure *closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
+    closure->function = function;
+    return closure;
 }
