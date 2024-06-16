@@ -43,6 +43,8 @@ typedef enum
     OP_JUMP_FALSE,
     OP_JUMP,
 
+    OP_CALL,
+
     OP_LOOP, // works like jump but with negative offset
 
     OP_PRINT, // FIXME: shouldn't be opcode
