@@ -138,6 +138,11 @@ static void emitBytes(uint8_t byte1, uint8_t byte2)
     emitByte(byte2);
 }
 
+static void emitReturn()
+{
+    emitBytes(OP_NIL, OP_RETURN);
+}
+
 static int emitJump(uint8_t instruction)
 {
     emitByte(instruction);
@@ -159,7 +164,7 @@ static void emitLoop(int loopStart)
 static ObjFunc *endCompiler()
 {
 
-    emitByte(OP_RETURN);
+    emitReturn();
     ObjFunc *func = current->function;
 
 #ifdef DEBUG_PRINT_CODE
@@ -359,7 +364,7 @@ static uint8_t argumentList()
             if (argCount == 255)
             {
                 error("Can't have more than 255 arguments");
-                // if you need more than 255 arguments, you're doing something wrong :) 
+                // if you need more than 255 arguments, you're doing something wrong :)
             }
 
             argCount++;
@@ -636,6 +641,24 @@ static void forStatement()
     endScope();
 }
 
+static void returnStatement()
+{
+    if (current->type == TYPE_SCRIPT)
+    {
+        error("Can't return from top-level code");
+    }
+    if (match(TOKEN_SEMICOLON))
+    {
+        emitReturn();
+    }
+    else
+    {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after return value");
+        emitByte(OP_RETURN);
+    }
+}
+
 static void statement()
 {
     if (match(TOKEN_PRINT))
@@ -659,6 +682,10 @@ static void statement()
         beginScope();
         block();
         endScope();
+    }
+    else if (match(TOKEN_RETURN))
+    {
+        returnStatement();
     }
     else
     {
