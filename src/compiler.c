@@ -25,8 +25,10 @@ typedef enum
     TYPE_SCRIPT
 } FunctionType;
 
-typedef struct
+typedef struct Compiler
 {
+    struct Compiler *enclosing;
+
     ObjFunc *function;
     FunctionType type;
 
@@ -43,12 +45,20 @@ static Chunk *currentChunk()
 
 static void initCompiler(Compiler *compiler, FunctionType type)
 {
+    compiler->enclosing = current;
+
     compiler->function = NULL;
     compiler->type = type;
     initLocalsArray(&compiler->locals);
     compiler->scopeDepth = 0;
     compiler->function = newFunction();
     current = compiler;
+
+    if (type != TYPE_SCRIPT)
+    {
+        current->function->name = copyString(parser.previous.start,
+                                             parser.previous.length);
+    }
 
     Local local;
     local.depth = 0;
@@ -165,6 +175,8 @@ static ObjFunc *endCompiler()
 #endif
 
     freeLocalsArray(&current->locals);
+
+    current = current->enclosing;
 
     return func;
 }
@@ -308,26 +320,11 @@ static void block()
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
-static void expressionStatement()
-{
-    expression();
-    consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
-    emitByte(OP_POP);
-}
-
-static uint16_t parseVar(const char *errorMessage)
-{
-    consume(TOKEN_IDENTIFIER, errorMessage);
-
-    declareVar();
-    if (current->scopeDepth > 0)
-        return 0;
-
-    return identifierConstant(&parser.previous);
-}
-
 static void markInitialized()
 {
+    if (current->scopeDepth == 0)
+        return;
+
     current->locals.values[current->locals.count - 1].depth = current->scopeDepth;
 }
 
@@ -348,6 +345,69 @@ static void defineVar(uint16_t global)
         emitByte(OP_DEFINE_GLOBAL_LONG);
         emitBytes((global >> 8) & 0xff, global & 0xff);
     }
+}
+
+static uint16_t parseVar(const char *errorMessage)
+{
+    consume(TOKEN_IDENTIFIER, errorMessage);
+
+    declareVar();
+    if (current->scopeDepth > 0)
+        return 0;
+
+    return identifierConstant(&parser.previous);
+}
+
+static void function(FunctionType type)
+{
+    Compiler compiler;
+    initCompiler(&compiler, type);
+    beginScope();
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after function name");
+    if (!check(TOKEN_RIGHT_PAREN))
+    {
+        do
+        {
+            current->function->arity++;
+            uint16_t constant = parseVar("Expect parameter name");
+            defineVar(constant);
+        } while (match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters");
+
+    consume(TOKEN_LEFT_BRACE, "Expect '{' before function body");
+
+    block();
+
+    ObjFunc *func = endCompiler();
+    uint16_t constant = makeConstant(OBJ_VAL(func));
+
+    if (constant < 256)
+    {
+        emitBytes(OP_CONSTANT, (uint8_t)constant);
+    }
+    else
+    {
+        emitByte(OP_CONSTANT_LONG);
+        emitBytes((constant >> 8) & 0xff, constant & 0xff);
+    }
+}
+
+static void fnDeclaration()
+{
+    uint8_t global = parseVar("Expect function name");
+    markInitialized();
+    function(TYPE_FUNCTION);
+    defineVar(global);
+}
+
+static void expressionStatement()
+{
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+    emitByte(OP_POP);
 }
 
 static void varDeclaration()
@@ -399,11 +459,14 @@ static void declaration()
     {
         varDeclaration();
     }
+    else if (match(TOKEN_FN))
+    {
+        fnDeclaration();
+    }
     else
     {
         statement();
     }
-
     if (parser.panicMode)
     {
         synchronize();

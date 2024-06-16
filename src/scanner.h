@@ -45,6 +45,7 @@ typedef enum
     TOKEN_WHILE,
     TOKEN_ERROR,
     TOKEN_EOF,
+    TOKEN_FN,
 
     TOKEN_PRINT, // FIXME: should be just a func
 } TokenType;

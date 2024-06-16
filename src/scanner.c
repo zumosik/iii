@@ -191,6 +191,8 @@ static TokenType identType()
                 return checkKeyword(2, 3, "lse", TOKEN_FALSE);
             case 'o':
                 return checkKeyword(2, 1, "r", TOKEN_FOR);
+            case 'n':
+                return TOKEN_FN;
             }
         }
         break;
