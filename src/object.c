@@ -45,15 +45,14 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash)
     return string;
 }
 
-
-
 ObjString *takeString(char *chars, int length)
 {
     uint32_t hash = hashString(chars, length);
 
     ObjString *interned = tableFindString(&vm.strings, chars, length, hash);
 
-    if (interned != NULL) {
+    if (interned != NULL)
+    {
         FREE_ARRAY(char, chars, length + 1);
         return interned;
     }
@@ -65,12 +64,57 @@ ObjString *copyString(const char *chars, int length)
 {
     uint32_t hash = hashString(chars, length);
 
-    ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
+    ObjString *interned = tableFindString(&vm.strings, chars, length, hash);
 
-    if (interned != NULL) return interned;
+    if (interned != NULL)
+        return interned;
 
     char *heapChars = ALLOCATE(char, length + 1);
     memcpy(heapChars, chars, length);
     heapChars[length] = '\0';
     return allocateString(heapChars, length, hash);
+}
+
+ObjFunc *newFunction()
+{
+    ObjFunc *func = ALLOCATE_OBJ(ObjFunc, OBJ_FUNCTION);
+    func->arity = 0;
+    func->name = NULL;
+    initChunk(&func->chunk);
+    return func;
+}
+
+static void printFunc(ObjFunc *func)
+{
+    if (func->name == NULL)
+    {
+        printf("<script>");
+        return;
+    }
+    printf("<fn %s>", func->name->chars);
+}
+
+void printObject(Value value)
+{
+    switch (AS_OBJ(value)->type)
+    {
+    case OBJ_STRING:
+        printf("%s", AS_CSTRING(value));
+        break;
+    case OBJ_FUNCTION:
+        printFunc(AS_FUNCTION(value));
+        break;
+    case OBJ_NATIVE:
+        printf("<native fn>");
+        break;
+    default:
+        printf("Unknown object type\n");
+    }
+}
+
+ObjNative *newNative(NativeFn function)
+{
+    ObjNative *native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
+    native->function = function;
+    return native;
 }

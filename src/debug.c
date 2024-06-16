@@ -62,8 +62,6 @@ int disassembleInstruction(Chunk *chunk, int offset)
         return simpleInstruction("OP_LESS", offset);
     case OP_NOT:
         return simpleInstruction("OP_NOT", offset);
-    case OP_PRINT:
-        return simpleInstruction("OP_PRINT", offset);
     case OP_POP:
         return simpleInstruction("OP_POP", offset);
     case OP_DEFINE_GLOBAL:
@@ -92,6 +90,8 @@ int disassembleInstruction(Chunk *chunk, int offset)
         return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
     case OP_LOOP:
         return jumpInstruction("OP_LOOP", -1, chunk, offset);
+    case OP_CALL:
+        return byteInstruction("OP_CALL", chunk, offset);
     default:
         printf("Unknown opcode %d\n", instruction);
         return offset + 1;
