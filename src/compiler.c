@@ -421,11 +421,11 @@ static void function(FunctionType type)
 
     if (constant < 256)
     {
-        emitBytes(OP_CONSTANT, (uint8_t)constant);
+        emitBytes(OP_CLOSURE, (uint8_t)constant);
     }
     else
     {
-        emitByte(OP_CONSTANT_LONG);
+        emitByte(OP_CLOSURE_LONG);
         emitBytes((constant >> 8) & 0xff, constant & 0xff);
     }
 }

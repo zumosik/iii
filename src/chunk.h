@@ -45,6 +45,9 @@ typedef enum
 
     OP_CALL,
 
+    OP_CLOSURE,
+    OP_CLOSURE_LONG,
+
     OP_LOOP, // works like jump but with negative offset
 
 } OpCode;

@@ -63,7 +63,7 @@ static void runtimeError(const char *format, ...)
     for (int i = vm.frameCount - 1; i >= 0; i--)
     {
         CallFrame *frame = &vm.frames[i];
-        ObjFunc *function = frame->function;
+        ObjFunc *function = frame->closure->function;
         // -1 because the IP is sitting on the next instruction to be executed.
         size_t instruction = frame->ip - function->chunk.code - 1;
         fprintf(stderr, "[line %d] in ",
@@ -90,7 +90,6 @@ static void defineNative(const char *name, NativeFn function)
     pop();
 }
 
-
 void initVM()
 {
     resetStack();
@@ -109,12 +108,12 @@ void freeVM()
     freeTable(&vm.globals);
 }
 
-
-static bool call(ObjFunc *function, int argCount)
+static bool call(ObjClosure *closure, int argCount)
 {
-    if (argCount != function->arity)
+
+    if (argCount != closure->function->arity)
     {
-        runtimeError("Expected %d arguments but got %d", function->arity, argCount);
+        runtimeError("Expected %d arguments but got %d", closure->function->arity, argCount);
         return false;
     }
 
@@ -125,8 +124,8 @@ static bool call(ObjFunc *function, int argCount)
     }
 
     CallFrame *frame = &vm.frames[vm.frameCount++];
-    frame->function = function;
-    frame->ip = function->chunk.code;
+    frame->closure = closure;
+    frame->ip = closure->function->chunk.code;
     frame->slots = vm.stackTop - argCount - 1;
     return true;
 }
@@ -137,8 +136,8 @@ static bool callValue(Value callee, int argCount)
     {
         switch (OBJ_TYPE(callee))
         {
-        case OBJ_FUNCTION:
-            return call(AS_FUNCTION(callee), argCount);
+        case OBJ_CLOSURE:
+            return call(AS_CLOSURE(callee), argCount);
         case OBJ_NATIVE:
         {
             NativeFn native = AS_NATIVE(callee);
@@ -188,8 +187,8 @@ static InterpretResult run()
 #define READ_BYTE() (*frame->ip++)
 #define READ_SHORT() \
     (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
-#define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
-#define READ_CONSTANT_LONG() (frame->function->chunk.constants.values[(READ_BYTE() << 8) | READ_BYTE()])
+#define READ_CONSTANT() (frame->closure->function->chunk.constants.values[READ_BYTE()])
+#define READ_CONSTANT_LONG() (frame->closure->function->chunk.constants.values[(READ_BYTE() << 8) | READ_BYTE()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
 #define BINARY_OP(valType, op)                          \
@@ -430,6 +429,13 @@ static InterpretResult run()
             frame = &vm.frames[vm.frameCount - 1];
             break;
         }
+        case OP_CLOSURE:
+        {
+            ObjFunc *function = AS_FUNCTION(READ_CONSTANT());
+            ObjClosure *closure = newClosure(function);
+            push(OBJ_VAL(closure));
+            break;
+        }
         }
     }
 
@@ -447,8 +453,12 @@ InterpretResult interpret(const char *source)
     ObjFunc *func = compile(source);
     if (func == NULL)
         return INTERPRET_COMPILE_ERROR;
+
     push(OBJ_VAL(func));
-    callValue(OBJ_VAL(func), 0);
+    ObjClosure *closure = newClosure(func);
+    pop();
+    push(OBJ_VAL(closure));
+    callValue(OBJ_VAL(closure), 0);
 
     return run();
 }
