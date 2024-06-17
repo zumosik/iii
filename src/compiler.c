@@ -341,15 +341,8 @@ static void defineVar(uint16_t global)
         return;
     }
 
-    if (global < 256)
-    {
-        emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
-    }
-    else
-    {
-        emitByte(OP_DEFINE_GLOBAL_LONG);
-        emitBytes((global >> 8) & 0xff, global & 0xff);
-    }
+    emitByte(OP_DEFINE_GLOBAL);
+    emitBytes((global >> 8) & 0xff, global & 0xff);
 }
 
 static uint8_t argumentList()
@@ -419,15 +412,8 @@ static void function(FunctionType type)
     ObjFunc *func = endCompiler();
     uint16_t constant = makeConstant(OBJ_VAL(func));
 
-    if (constant < 256)
-    {
-        emitBytes(OP_CLOSURE, (uint8_t)constant);
-    }
-    else
-    {
-        emitByte(OP_CLOSURE_LONG);
-        emitBytes((constant >> 8) & 0xff, constant & 0xff);
-    }
+    emitByte(OP_CONSTANT);
+    emitBytes((constant >> 8) & 0xff, constant & 0xff);
 }
 
 static void fnDeclaration()
@@ -539,7 +525,6 @@ static void or_(bool canAssign)
     parsePrecedence(PREC_OR);
     patchJump(endJump);
 }
-
 
 static void ifStatement()
 {
@@ -655,7 +640,7 @@ static void returnStatement()
 
 static void statement()
 {
-     if (match(TOKEN_IF))
+    if (match(TOKEN_IF))
     {
         ifStatement();
     }
@@ -797,66 +782,31 @@ static void namedVar(Token name, bool canAssign)
 {
     uint16_t arg;
     uint8_t getOp, setOp;
-    bool isLong;
 
     int argLocal = resolveLocal(current, &name);
     if (argLocal > -1)
     {
         arg = (uint16_t)argLocal;
-        if (arg < 256)
-        {
-            isLong = false;
-            getOp = OP_GET_LOCAL;
-            setOp = OP_SET_LOCAL;
-        }
-        else
-        {
-            isLong = true;
-            getOp = OP_GET_LOCAL_LONG;
-            setOp = OP_SET_LOCAL_LONG;
-        }
+        getOp = OP_GET_LOCAL;
+        setOp = OP_SET_LOCAL;
     }
     else
     { // global var
         arg = identifierConstant(&name);
-        if (arg < 256)
-        {
-            isLong = false;
-            getOp = OP_GET_GLOBAL;
-            setOp = OP_SET_GLOBAL;
-        }
-        else
-        {
-            isLong = true;
-            getOp = OP_GET_GLOBAL_LONG;
-            setOp = OP_SET_GLOBAL_LONG;
-        }
+        getOp = OP_GET_GLOBAL;
+        setOp = OP_SET_GLOBAL;
     }
 
     if (canAssign && match(TOKEN_EQUAL)) // x = ...
     {
         expression();
-        if (isLong)
-        {
-            emitByte(setOp);
-            emitBytes((arg >> 8) & 0xff, arg & 0xff);
-        }
-        else
-        {
-            emitBytes(setOp, (uint8_t)arg);
-        }
+        emitByte(setOp);
+        emitBytes((arg >> 8) & 0xff, arg & 0xff);
     }
     else
     {
-        if (isLong)
-        {
             emitByte(getOp);
             emitBytes((arg >> 8) & 0xff, arg & 0xff);
-        }
-        else
-        {
-            emitBytes(getOp, (uint8_t)arg);
-        }
     }
 }
 

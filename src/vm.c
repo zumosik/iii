@@ -187,9 +187,7 @@ static InterpretResult run()
 #define READ_BYTE() (*frame->ip++)
 #define READ_SHORT() \
     (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
-#define READ_CONSTANT() (frame->closure->function->chunk.constants.values[READ_BYTE()])
 #define READ_CONSTANT_LONG() (frame->closure->function->chunk.constants.values[(READ_BYTE() << 8) | READ_BYTE()])
-#define READ_STRING() AS_STRING(READ_CONSTANT())
 #define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
 #define BINARY_OP(valType, op)                          \
     do                                                  \
@@ -217,21 +215,15 @@ static InterpretResult run()
             printf(" ]");
         }
         printf("\n");
-        disassembleInstruction(&frame->function->chunk, (int)(frame->ip - frame->function->chunk.code));
+        disassembleInstruction(&frame->closure->function->chunk, (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
         uint8_t instruction;
         switch (instruction = READ_BYTE())
         {
-        case OP_CONSTANT_LONG:
+        case OP_CONSTANT:
             Value constant = READ_CONSTANT_LONG();
             push(constant);
             break;
-        case OP_CONSTANT:
-        {
-            Value constant = READ_CONSTANT();
-            push(constant);
-            break;
-        }
         case OP_NIL:
             push(NIL_VAL);
             break;
@@ -314,14 +306,14 @@ static InterpretResult run()
             break;
         case OP_DEFINE_GLOBAL:
         {
-            ObjString *name = READ_STRING();
+            ObjString *name = READ_STRING_LONG();
             tableSet(&vm.globals, name, peek(0));
             pop();
             break;
         }
         case OP_GET_GLOBAL:
         {
-            ObjString *name = READ_STRING();
+            ObjString *name = READ_STRING_LONG();
             Value val;
             if (!tableGet(&vm.globals, name, &val))
             {
@@ -333,38 +325,6 @@ static InterpretResult run()
             break;
         }
         case OP_SET_GLOBAL:
-        {
-            ObjString *name = READ_STRING();
-            if (tableSet(&vm.globals, name, peek(0)))
-            {
-                tableDelete(&vm.globals, name);
-                undefinedVarError(name);
-                return INTERPRET_RUNTIME_ERROR;
-            }
-
-            break;
-        }
-        case OP_DEFINE_GLOBAL_LONG:
-        {
-            ObjString *name = READ_STRING_LONG();
-            tableSet(&vm.globals, name, peek(0));
-            pop();
-            break;
-        }
-        case OP_GET_GLOBAL_LONG:
-        {
-            ObjString *name = READ_STRING_LONG();
-            Value val;
-            if (!tableGet(&vm.globals, name, &val))
-            {
-                undefinedVarError(name);
-                return INTERPRET_RUNTIME_ERROR;
-            }
-
-            push(val);
-            break;
-        }
-        case OP_SET_GLOBAL_LONG:
         {
             ObjString *name = READ_STRING_LONG();
             if (tableSet(&vm.globals, name, peek(0)))
@@ -378,23 +338,11 @@ static InterpretResult run()
         }
         case OP_GET_LOCAL:
         {
-            uint8_t slot = READ_BYTE();
-            push(frame->slots[slot]);
-            break;
-        }
-        case OP_SET_LOCAL:
-        {
-            uint8_t slot = READ_BYTE();
-            frame->slots[slot] = peek(0);
-            break;
-        }
-        case OP_GET_LOCAL_LONG:
-        {
             uint16_t slot = READ_SHORT();
             push(vm.stack[slot]);
             break;
         }
-        case OP_SET_LOCAL_LONG:
+        case OP_SET_LOCAL:
         {
             uint16_t slot = READ_BYTE();
             frame->slots[slot] = peek(0);
@@ -431,7 +379,7 @@ static InterpretResult run()
         }
         case OP_CLOSURE:
         {
-            ObjFunc *function = AS_FUNCTION(READ_CONSTANT());
+            ObjFunc *function = AS_FUNCTION(READ_CONSTANT_LONG());
             ObjClosure *closure = newClosure(function);
             push(OBJ_VAL(closure));
             break;
@@ -441,9 +389,7 @@ static InterpretResult run()
 
 #undef READ_BYTE
 #undef READ_SHORT
-#undef READ_CONSTANT
 #undef READ_CONSTANT_LONG
-#undef READ_STRING
 #undef READ_STRING_LONG
 #undef BINARY_OP
 }
