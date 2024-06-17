@@ -6,47 +6,40 @@
 
 typedef enum
 {
-    OP_CONSTANT,
-    OP_CONSTANT_LONG,
+    OP_CONSTANT, // push a constant to the stack
 
-    OP_DEFINE_GLOBAL,
-    OP_GET_GLOBAL,
-    OP_SET_GLOBAL,
-    OP_DEFINE_GLOBAL_LONG,
-    OP_GET_GLOBAL_LONG,
-    OP_SET_GLOBAL_LONG,
+    OP_DEFINE_GLOBAL, // define a global variable
+    OP_GET_GLOBAL,    // get global variable
+    OP_SET_GLOBAL,    // set global variable
 
-    OP_GET_LOCAL,
-    OP_SET_LOCAL,
-    OP_SET_LOCAL_LONG,
-    OP_GET_LOCAL_LONG,
+    OP_SET_LOCAL, // set local variable
+    OP_GET_LOCAL, // get local variable
 
-    OP_NIL,
-    OP_TRUE,
-    OP_FALSE,
+    OP_NIL,   // nil
+    OP_TRUE,  // true
+    OP_FALSE, // false
 
-    OP_NOT,
-    OP_EQUAL,
-    OP_GREATER,
-    OP_LESS,
+    OP_NOT,     // not
+    OP_EQUAL,   // equal
+    OP_GREATER, // greater
+    OP_LESS,    // less
 
-    OP_NEGATE,
-    OP_ADD,
-    OP_SUBTRACT,
-    OP_MULTIPLY,
-    OP_DIVIDE,
+    OP_NEGATE,   // negate
+    OP_ADD,      // add
+    OP_SUBTRACT, // subtract
+    OP_MULTIPLY, // multiply
+    OP_DIVIDE,   // divide
 
-    OP_RETURN,
+    OP_RETURN, // return the top of the stack
 
-    OP_POP,
+    OP_POP, // pop the top of the stack
 
-    OP_JUMP_FALSE,
-    OP_JUMP,
+    OP_JUMP_FALSE, // jump to a specific offset when false
+    OP_JUMP,       // jump to a specific offset
 
-    OP_CALL,
+    OP_CALL, // call a function
 
     OP_CLOSURE,
-    OP_CLOSURE_LONG,
 
     OP_LOOP, // works like jump but with negative offset
 
