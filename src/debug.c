@@ -1,7 +1,55 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "chunk.h"
+#include "object.h"
 #include "value.h"
+
+
+
+
+int simpleInstruction(const char *name, int offset)
+{
+    printf("%s\n", name);
+    return offset + 1;
+}
+
+int byteInstruction(const char *name, Chunk *chunk, int offset)
+{
+    uint8_t slot = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
+}
+
+int jumpInstruction(const char *name, int sign,
+                    Chunk *chunk, int offset)
+{
+    uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
+    jump |= chunk->code[offset + 2];
+    printf("%-16s %4d -> %d\n", name, offset,
+           offset + 3 + sign * jump);
+    return offset + 3;
+}
+
+int byteInstructionLong(const char *name, Chunk *chunk, int offset)
+{
+    uint16_t slot = (chunk->code[offset + 1] << 8) |
+                    chunk->code[offset + 2];
+    printf("%-16s %6d\n", name, slot);
+    return offset + 3;
+}
+
+int longConstantInstruction(const char *name, Chunk *chunk, int offset)
+{
+    uint16_t constant = (chunk->code[offset + 1] << 8) |
+                        chunk->code[offset + 2];
+
+    printf("%-16s %4d '", name, constant);
+    printValue(chunk->constants.values[constant]);
+    printf("'\n");
+    return offset + 3;
+}
+
 
 void disassembleChunk(Chunk *chunk, const char *name)
 {
@@ -85,56 +133,33 @@ int disassembleInstruction(Chunk *chunk, int offset)
         offset++;
         uint16_t constant = (chunk->code[offset] << 8) | chunk->code[offset + 1];
         offset += 2;
-        printf("%-16s %6d ", "OP_CLOSURE_LONG", constant);
+        printf("%-16s %6d ", "OP_CLOSURE", constant);
         printValue(chunk->constants.values[constant]);
         printf("\n");
+
+        ObjFunc* func = AS_FUNCTION(chunk->constants.values[constant]);
+
+        printf("\n%s\n", func->name->chars);
+
+    
+
+        for (int j = 0; j < func->upvalueCount; j++) {
+          int isLocal = chunk->code[offset++];
+          int index =  ((chunk->code[offset] << 8) |chunk->code[offset+1]);
+          offset+=2;
+          printf("%04d    |          | %s %d\n",
+                 offset-3, isLocal ? "local" : "upvalue",
+                 index);
+        }
+
         return offset;
     }
+    case OP_GET_UPVALUE: 
+      return byteInstructionLong("OP_GET_UPVALUE", chunk, offset);
+    case OP_SET_UPVALUE:
+      return byteInstructionLong("OP_SET_UPVALUE", chunk, offset);
     default:
         printf("Unknown opcode %d\n", instruction);
         return offset + 1;
     }
 }
-
-int simpleInstruction(const char *name, int offset)
-{
-    printf("%s\n", name);
-    return offset + 1;
-}
-
-int byteInstruction(const char *name, Chunk *chunk, int offset)
-{
-    uint8_t slot = chunk->code[offset + 1];
-    printf("%-16s %4d\n", name, slot);
-    return offset + 2;
-}
-
-int jumpInstruction(const char *name, int sign,
-                    Chunk *chunk, int offset)
-{
-    uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
-    jump |= chunk->code[offset + 2];
-    printf("%-16s %4d -> %d\n", name, offset,
-           offset + 3 + sign * jump);
-    return offset + 3;
-}
-
-int byteInstructionLong(const char *name, Chunk *chunk, int offset)
-{
-    uint16_t slot = (chunk->code[offset + 1] << 8) |
-                    chunk->code[offset + 2];
-    printf("%-16s %6d\n", name, slot);
-    return offset + 3;
-}
-
-int longConstantInstruction(const char *name, Chunk *chunk, int offset)
-{
-    uint32_t constant = (chunk->code[offset + 1] << 8) |
-                        chunk->code[offset + 2];
-
-    printf("%-16s %4d '", name, constant);
-    printValue(chunk->constants.values[constant]);
-    printf("'\n");
-    return offset + 3;
-}
-
