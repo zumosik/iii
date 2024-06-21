@@ -80,6 +80,7 @@ ObjFunc *newFunction()
     ObjFunc *func = ALLOCATE_OBJ(ObjFunc, OBJ_FUNCTION);
     func->arity = 0;
     func->name = NULL;
+    func->upvalueCount = 0;
     initChunk(&func->chunk);
     return func;
 }
