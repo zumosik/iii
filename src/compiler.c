@@ -169,8 +169,9 @@ static void emitLoop(int loopStart)
 
 static ObjFunc *endCompiler()
 {
-
     emitReturn();
+
+    current->function->upvalueCount = current->upvalues.count - 1;
     ObjFunc *func = current->function;
 
 #ifdef DEBUG_PRINT_CODE
@@ -185,7 +186,9 @@ static ObjFunc *endCompiler()
     }
 #endif
 
+
     freeLocalsArray(&current->locals);
+    freeUpvaluesArray(&current->upvalues);
 
     current = current->enclosing;
 
@@ -310,12 +313,17 @@ static uint16_t resolveUpvalue(Compiler *compiler, Token *name)
 {
     if (compiler->enclosing == NULL)
         return -1; //  if the enclosing Compiler is NULL, we know we’ve
-                   //  reached the outermost function without finding a local variable.
+                   //  reached the outermost function without finding a variable.
 
     int local = resolveLocal(compiler->enclosing, name);
     if (local != 1)
     {
         return addUpvalue(compiler, (uint16_t)local, true);
+    }
+
+    int upvalue = resolveUpvalue(compiler->enclosing, name);
+    if (upvalue != -1) {
+      return addUpvalue(compiler, (uint16_t)upvalue, false);
     }
 
     return -1;
@@ -454,8 +462,17 @@ static void function(FunctionType type)
     ObjFunc *func = endCompiler();
     uint16_t constant = makeConstant(OBJ_VAL(func));
 
-    emitByte(OP_CONSTANT);
+    emitByte(OP_CLOSURE);
     emitBytes((constant >> 8) & 0xff, constant & 0xff);
+
+    printf("%d", func->upvalueCount);
+
+
+    for (int i = 0; func->upvalueCount; i++) {
+      emitByte(compiler.upvalues.values[i].isLocal ? 1 : 0);
+      emitBytes( (compiler.upvalues.values[i].index >> 8) & 0xff ,
+                  compiler.upvalues.values[i].index & 0xff );
+    }
 }
 
 static void fnDeclaration()
