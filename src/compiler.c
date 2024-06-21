@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +8,7 @@
 #include "scanner.h"
 #include "chunk.h"
 #include "object.h"
-#include "locals.h"
+#include "compiler_arrays.h"
 
 typedef struct
 {
@@ -33,6 +34,8 @@ typedef struct Compiler
     FunctionType type;
 
     LocalsArray locals;
+    UpvaluesArray upvalues;
+
     int scopeDepth;
 } Compiler;
 
@@ -49,11 +52,14 @@ static void initCompiler(Compiler *compiler, FunctionType type)
 
     compiler->function = NULL;
     compiler->type = type;
+
     initLocalsArray(&compiler->locals);
+    initUpvaluesArray(&compiler->upvalues);
+
     compiler->scopeDepth = 0;
     compiler->function = newFunction();
     current = compiler;
-
+ 
     if (type != TYPE_SCRIPT)
     {
         current->function->name = copyString(parser.previous.start,
@@ -261,7 +267,7 @@ static bool identifiersEqual(Token *a, Token *b)
     return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static uint16_t resolveLocal(Compiler *compiler, Token *name)
+static int resolveLocal(Compiler *compiler, Token *name)
 {
     for (int i = compiler->locals.count - 1; i >= 0; i--)
     {
@@ -272,29 +278,32 @@ static uint16_t resolveLocal(Compiler *compiler, Token *name)
             {
                 error("Can't read local variable in its own initializer.");
             }
-            return (uint16_t)i;
+            return i;
         }
     }
 
     return -1;
 }
 
-static uint16_t addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
+
+static int addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
 {
     uint16_t upvalueCount = compiler->function->upvalueCount;
 
     for (int i = 0; i < upvalueCount; i++)
     {
-        Upvalue *upvalue = &compiler->upvalues[i];
+        Upvalue *upvalue = &compiler->upvalues.values[i];
         if (upvalue->index == index && upvalue->isLocal == isLocal)
         {
             return i;
         }
     }
 
-    compiler->upvalues[upvalueCount].isLocal = isLocal;
-    compiler->upvalues[upvalueCount].index = index;
-    return compiler->function->upvalueCount++;
+    Upvalue val;
+    val.isLocal = isLocal;
+    val.index = isLocal;
+    writeUpvaluesArray(&compiler->upvalues, val);
+    return compiler->upvalues.count - 1; // count is index for next element   
 }
 
 static uint16_t resolveUpvalue(Compiler *compiler, Token *name)
@@ -303,10 +312,10 @@ static uint16_t resolveUpvalue(Compiler *compiler, Token *name)
         return -1; //  if the enclosing Compiler is NULL, we know we’ve
                    //  reached the outermost function without finding a local variable.
 
-    uint16_t local = resolveLocal(compiler->enclosing, name);
+    int local = resolveLocal(compiler->enclosing, name);
     if (local != 1)
     {
-        return addUpvalue(compiler, local);
+        return addUpvalue(compiler, (uint16_t)local, true);
     }
 
     return -1;
@@ -779,7 +788,7 @@ static void binary(bool canAssign)
     }
 }
 
-static void call()
+static void call(bool canAssign)
 {
     uint8_t argCount = argumentList();
     emitBytes(OP_CALL, argCount);
@@ -816,13 +825,13 @@ static void namedVar(Token name, bool canAssign)
     uint16_t arg;
     uint8_t getOp, setOp;
 
-    arg = resolveLocal(current, &name);
-    if (arg != -1)
+    int argLocal = resolveLocal(current, &name);
+    if (argLocal != -1)
     {
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
     }
-    else if ((arg = resolveUpvalue(current, &name)) != -1)
+    else if ((argLocal = resolveUpvalue(current, &name)) != -1)
     {
         getOp = OP_GET_UPVALUE;
         setOp = OP_SET_UPVALUE;
