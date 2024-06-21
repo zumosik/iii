@@ -13,7 +13,7 @@
 #define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
 #define AS_FUNCTION(value) ((ObjFunc *)AS_OBJ(value))
 #define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
-#define AS_CLOSURE(value) ((ObjClosure*)AS_OBJ(value))
+#define AS_CLOSURE(value) ((ObjClosure *)AS_OBJ(value))
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
@@ -42,6 +42,7 @@ typedef struct
 {
     Obj obj;
     int arity;
+    uint16_t upvalueCount;
     Chunk chunk;
     ObjString *name;
 } ObjFunc;

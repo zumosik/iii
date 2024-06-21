@@ -261,7 +261,7 @@ static bool identifiersEqual(Token *a, Token *b)
     return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static int resolveLocal(Compiler *compiler, Token *name)
+static uint16_t resolveLocal(Compiler *compiler, Token *name)
 {
     for (int i = compiler->locals.count - 1; i >= 0; i--)
     {
@@ -272,8 +272,41 @@ static int resolveLocal(Compiler *compiler, Token *name)
             {
                 error("Can't read local variable in its own initializer.");
             }
+            return (uint16_t)i;
+        }
+    }
+
+    return -1;
+}
+
+static uint16_t addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
+{
+    uint16_t upvalueCount = compiler->function->upvalueCount;
+
+    for (int i = 0; i < upvalueCount; i++)
+    {
+        Upvalue *upvalue = &compiler->upvalues[i];
+        if (upvalue->index == index && upvalue->isLocal == isLocal)
+        {
             return i;
         }
+    }
+
+    compiler->upvalues[upvalueCount].isLocal = isLocal;
+    compiler->upvalues[upvalueCount].index = index;
+    return compiler->function->upvalueCount++;
+}
+
+static uint16_t resolveUpvalue(Compiler *compiler, Token *name)
+{
+    if (compiler->enclosing == NULL)
+        return -1; //  if the enclosing Compiler is NULL, we know we’ve
+                   //  reached the outermost function without finding a local variable.
+
+    uint16_t local = resolveLocal(compiler->enclosing, name);
+    if (local != 1)
+    {
+        return addUpvalue(compiler, local);
     }
 
     return -1;
@@ -783,12 +816,16 @@ static void namedVar(Token name, bool canAssign)
     uint16_t arg;
     uint8_t getOp, setOp;
 
-    int argLocal = resolveLocal(current, &name);
-    if (argLocal > -1)
+    arg = resolveLocal(current, &name);
+    if (arg != -1)
     {
-        arg = (uint16_t)argLocal;
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
+    }
+    else if ((arg = resolveUpvalue(current, &name)) != -1)
+    {
+        getOp = OP_GET_UPVALUE;
+        setOp = OP_SET_UPVALUE;
     }
     else
     { // global var
@@ -805,8 +842,8 @@ static void namedVar(Token name, bool canAssign)
     }
     else
     {
-            emitByte(getOp);
-            emitBytes((arg >> 8) & 0xff, arg & 0xff);
+        emitByte(getOp);
+        emitBytes((arg >> 8) & 0xff, arg & 0xff);
     }
 }
 

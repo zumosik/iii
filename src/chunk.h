@@ -4,6 +4,13 @@
 #include "value.h"
 #include "common.h"
 
+// OP_CONSTANT, OP_DEFINE_GLOBAL, OP_GET_GLOBAL, OP_SET_GLOBAL,
+// OP_SET_LOCAL, OP_GET_LOCAL, OP_CLOSURE, OP_GET_UPVALUE, OP_SET_UPVALUE
+// all uses 2 bytes for the constant index
+// it wastes 256 bytes of memory in worst scenario
+// (we could do instruction with 1 byte and instruction_long with 2 bytes)
+// but it's not a big deal (can be optimized later if needed)
+
 typedef enum
 {
     OP_CONSTANT, // push a constant to the stack
@@ -14,6 +21,9 @@ typedef enum
 
     OP_SET_LOCAL, // set local variable
     OP_GET_LOCAL, // get local variable
+
+    OP_GET_UPVALUE, // get upvalue
+    OP_SET_UPVALUE, // set upvalue
 
     OP_NIL,   // nil
     OP_TRUE,  // true

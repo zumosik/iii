@@ -1,4 +1,4 @@
-#include "locals.h"
+#include "compiler_arrays.h"
 #include "common.h"
 #include "memory.h"
 
