@@ -73,3 +73,5 @@ cmake-build-debug/
 
 # Some util code
 *.py
+
+*.tmp
