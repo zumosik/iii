@@ -171,8 +171,11 @@ static ObjFunc *endCompiler()
 {
     emitReturn();
 
-    current->function->upvalueCount = current->upvalues.count - 1;
+    current->function->upvalueCount = current->upvalues.count;
     ObjFunc *func = current->function;
+
+    printf("func upvalueCount: %d\n", func->upvalueCount);
+
 
 #ifdef DEBUG_PRINT_CODE
 
@@ -291,9 +294,16 @@ static int resolveLocal(Compiler *compiler, Token *name)
 
 static int addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
 {
+  
     uint16_t upvalueCount = compiler->function->upvalueCount;
 
-    for (int i = 0; i < upvalueCount; i++)
+    printf("---\n");
+    for (int i = 0; i < compiler->upvalues.count; i++) {
+      printf("%d\n",compiler->upvalues.values[i].index);
+    }
+    printf("---\n");
+   
+  for (int i = 0; i < upvalueCount; i++)
     {
         Upvalue *upvalue = &compiler->upvalues.values[i];
         if (upvalue->index == index && upvalue->isLocal == isLocal)
@@ -304,7 +314,7 @@ static int addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
 
     Upvalue val;
     val.isLocal = isLocal;
-    val.index = isLocal;
+    val.index = index;
     writeUpvaluesArray(&compiler->upvalues, val);
     return compiler->upvalues.count - 1; // count is index for next element   
 }
@@ -430,7 +440,7 @@ static uint16_t parseVar(const char *errorMessage)
 
 static void function(FunctionType type)
 {
-    Compiler compiler;
+  Compiler compiler;
     initCompiler(&compiler, type);
     beginScope();
 
@@ -465,7 +475,6 @@ static void function(FunctionType type)
     emitByte(OP_CLOSURE);
     emitBytes((constant >> 8) & 0xff, constant & 0xff);
 
-    printf("%d", func->upvalueCount);
 
 
     for (int i = 0; func->upvalueCount; i++) {
@@ -847,11 +856,13 @@ static void namedVar(Token name, bool canAssign)
     {
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
-    }
+        arg = (uint16_t)argLocal;  
+  }
     else if ((argLocal = resolveUpvalue(current, &name)) != -1)
     {
         getOp = OP_GET_UPVALUE;
         setOp = OP_SET_UPVALUE;
+        arg = (uint16_t)argLocal;
     }
     else
     { // global var
