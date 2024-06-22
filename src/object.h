@@ -23,6 +23,7 @@ typedef enum
     OBJ_FUNCTION,
     OBJ_NATIVE,
     OBJ_CLOSURE,
+    OBJ_UPVALUE,
 } ObjType;
 
 struct Obj
@@ -73,7 +74,17 @@ ObjString *copyString(const char *chars, int length);
 typedef struct
 {
     Obj obj;
+    Value *location;
+} ObjUpvalue;
+
+ObjUpvalue *newUpvalue(Value *slot);
+
+typedef struct
+{
+    Obj obj;
     ObjFunc *function;
+    ObjUpvalue** upvalues;
+    int upvalueCount;
 } ObjClosure;
 
 ObjClosure *newClosure(ObjFunc *function);

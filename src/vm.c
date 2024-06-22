@@ -155,6 +155,12 @@ static bool callValue(Value callee, int argCount)
     return false;
 }
 
+static ObjUpvalue *captureUpvalue(Value *local)
+{
+    ObjUpvalue *createdUpvalue = newUpvalue(local);
+    return createdUpvalue;
+}
+
 static bool isFalsey(Value value)
 {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
@@ -382,6 +388,33 @@ static InterpretResult run()
             ObjFunc *function = AS_FUNCTION(READ_CONSTANT_LONG());
             ObjClosure *closure = newClosure(function);
             push(OBJ_VAL(closure));
+            printf("vm upvalueCount: %d\n", closure->upvalueCount);
+            for (int i = 0; i < closure->upvalueCount; i++)
+            {
+                uint8_t isLocal = READ_BYTE();
+                uint16_t index = READ_SHORT();
+                if (isLocal)
+                {
+                    closure->upvalues[i] =
+                        captureUpvalue(frame->slots + index);
+                }
+                else
+                {
+                    closure->upvalues[i] = frame->closure->upvalues[index];
+                }
+            }
+            break;
+        }
+        case OP_GET_UPVALUE:
+        {
+            uint16_t slot = READ_SHORT();
+            push(*frame->closure->upvalues[slot]->location);
+            break;
+        }
+        case OP_SET_UPVALUE:
+        {
+            uint16_t slot = READ_SHORT();
+            *frame->closure->upvalues[slot]->location = peek(0);
             break;
         }
         }
@@ -399,6 +432,8 @@ InterpretResult interpret(const char *source)
     ObjFunc *func = compile(source);
     if (func == NULL)
         return INTERPRET_COMPILE_ERROR;
+
+    printf("end compiler");
 
     push(OBJ_VAL(func));
     ObjClosure *closure = newClosure(func);

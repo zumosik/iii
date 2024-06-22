@@ -139,15 +139,14 @@ int disassembleInstruction(Chunk *chunk, int offset)
 
         ObjFunc* func = AS_FUNCTION(chunk->constants.values[constant]);
 
-        printf("\n%s\n", func->name->chars);
 
     
 
         for (int j = 0; j < func->upvalueCount; j++) {
           int isLocal = chunk->code[offset++];
-          int index =  ((chunk->code[offset] << 8) |chunk->code[offset+1]);
+          int index =  ((chunk->code[offset] << 8) | (chunk->code[offset+1]));
           offset+=2;
-          printf("%04d    |          | %s %d\n",
+          printf("%04d    |                       | %s %d\n",
                  offset-3, isLocal ? "local" : "upvalue",
                  index);
         }

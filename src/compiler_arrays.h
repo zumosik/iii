@@ -12,7 +12,7 @@ typedef struct
 
 typedef struct
 {
-  uint8_t index;
+  uint16_t index;
   bool isLocal;
 } Upvalue;
 
