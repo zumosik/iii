@@ -443,16 +443,7 @@ static void function(FunctionType type)
         do
         {
             current->function->arity++;
-
-            if (current->function->arity > 255)
-            {
-                errorAtCurrent("Can't have more than 255 parameters");
-                // just to not deal with _LONG instructions
-                // why would you need more than 255 parameters anyway?
-            
-                // FIXME: make it until 65535 
-            }
-
+            // if you will have more than 65535 you will have some unexpected behaviour
             uint16_t constant = parseVar("Expect parameter name");
             defineVar(constant);
         } while (match(TOKEN_COMMA));
@@ -486,7 +477,7 @@ static void function(FunctionType type)
 
 static void fnDeclaration()
 {
-    uint8_t global = parseVar("Expect function name");
+    uint16_t global = parseVar("Expect function name");
     markInitialized();
     function(TYPE_FUNCTION);
     defineVar(global);
