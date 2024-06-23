@@ -350,7 +350,7 @@ static InterpretResult run()
         }
         case OP_SET_LOCAL:
         {
-            uint16_t slot = READ_BYTE();
+            uint16_t slot = READ_SHORT();
             frame->slots[slot] = peek(0);
             break;
         }
@@ -388,7 +388,6 @@ static InterpretResult run()
             ObjFunc *function = AS_FUNCTION(READ_CONSTANT_LONG());
             ObjClosure *closure = newClosure(function);
             push(OBJ_VAL(closure));
-            printf("vm upvalueCount: %d\n", closure->upvalueCount);
             for (int i = 0; i < closure->upvalueCount; i++)
             {
                 uint8_t isLocal = READ_BYTE();
