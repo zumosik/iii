@@ -187,8 +187,7 @@ static ObjFunc *endCompiler()
     }
 #endif
 
-    // freeLocalsArray(&current->locals);
-    // FIXME
+    freeLocalsArray(&current->locals);
 
     current = current->enclosing;
 
@@ -274,7 +273,7 @@ static bool identifiersEqual(Token *a, Token *b)
 
 static int resolveLocal(Compiler *compiler, Token *name)
 {
-    for (int i = compiler->locals.count-1; i >= 0; i--)
+    for (int i = compiler->locals.count - 1; i >= 0; i--)
     {
         Local *local = &compiler->locals.values[i];
         if (identifiersEqual(name, &local->name))
@@ -283,18 +282,18 @@ static int resolveLocal(Compiler *compiler, Token *name)
             {
                 error("Can't read local variable in its own initializer.");
             }
-      return i;
+            return i;
         }
-
     }
 
     return -1;
 }
 
+
 static int addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
 {
 
-    uint16_t upvalueCount = compiler->function->upvalueCount;
+    uint16_t upvalueCount = compiler->upvalues.count;
 
     for (int i = 0; i < upvalueCount; i++)
     {
@@ -309,7 +308,7 @@ static int addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
     val.isLocal = isLocal;
     val.index = index;
     writeUpvaluesArray(&compiler->upvalues, val);
-    return compiler->upvalues.count - 1; // count is index for next element
+    return upvalueCount + 1; // count is index for next element
 }
 
 static int resolveUpvalue(Compiler *compiler, Token *name)
@@ -321,14 +320,12 @@ static int resolveUpvalue(Compiler *compiler, Token *name)
     int local = resolveLocal(compiler->enclosing, name);
     if (local != -1)
     {
-        printf("!local: %d\n", local);
         return addUpvalue(compiler, (uint16_t)local, true);
     }
 
     int upvalue = resolveUpvalue(compiler->enclosing, name);
     if (upvalue != -1)
     {
-        printf("!upvalue: %d, %d\n", upvalue, upvalue == -1);
         return addUpvalue(compiler, (uint16_t)upvalue, false);
     }
 
@@ -476,10 +473,8 @@ static void function(FunctionType type)
 
 
     uint16_t count = func->upvalueCount;
-    printf("upvalueCount: %04d\n", count);
     for (int i = 0; i < count; i++)
     {
-        printf("\n%d\n", compiler.upvalues.values[i].index);
         emitByte(compiler.upvalues.values[i].isLocal ? 1 : 0);
         emitBytes((compiler.upvalues.values[i].index >> 8) & 0xff,
                   compiler.upvalues.values[i].index & 0xff);
@@ -487,7 +482,6 @@ static void function(FunctionType type)
 
     freeUpvaluesArray(&compiler.upvalues);
 
-    printf("\n");
 }
 
 static void fnDeclaration()
@@ -854,40 +848,37 @@ static void string(bool canAssign)
 
 static void namedVar(Token name, bool canAssign)
 {
-    int arg;  
     uint8_t getOp, setOp;
 
-    arg = resolveLocal(current, &name);
+    int arg = resolveLocal(current, &name);
     if (arg != -1)
     {
-      printf("local\n");
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
     }
-    else if ((arg = resolveUpvalue(current, &name)) != -1 ) 
+    else if ((arg = resolveUpvalue(current, &name)) != -1) 
     {
-            getOp = OP_GET_UPVALUE;
-            setOp = OP_SET_UPVALUE;
+        getOp = OP_GET_UPVALUE;
+        setOp = OP_SET_UPVALUE;
     }
     else
     { // global var
-            arg = identifierConstant(&name);
-            getOp = OP_GET_GLOBAL;
-            setOp = OP_SET_GLOBAL;
+        arg = identifierConstant(&name);
+        getOp = OP_GET_GLOBAL;
+        setOp = OP_SET_GLOBAL;
     }
 
+    uint16_t argUint = (uint16_t)arg;
     if (canAssign && match(TOKEN_EQUAL)) // x = ...
     {
-    printf("setOp\n");
         expression();
         emitByte(setOp);
-        emitBytes((arg >> 8) & 0xff, arg & 0xff);
+        emitBytes((argUint >> 8) & 0xff, argUint & 0xff);
     }
     else
     {
-    printf("getOp\n");
         emitByte(getOp);
-        emitBytes((arg >> 8) & 0xff, arg & 0xff);
+        emitBytes((argUint >> 8) & 0xff, argUint & 0xff);
     }
 }
 
