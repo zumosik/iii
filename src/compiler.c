@@ -308,7 +308,7 @@ static int addUpvalue(Compiler *compiler, uint16_t index, bool isLocal)
     val.isLocal = isLocal;
     val.index = index;
     writeUpvaluesArray(&compiler->upvalues, val);
-    return upvalueCount + 1; // count is index for next element
+    return compiler->upvalues.count - 1; // count is index for next element
 }
 
 static int resolveUpvalue(Compiler *compiler, Token *name)
