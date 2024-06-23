@@ -345,7 +345,7 @@ static InterpretResult run()
         case OP_GET_LOCAL:
         {
             uint16_t slot = READ_SHORT();
-            push(vm.stack[slot]);
+            push(frame->slots[slot]);
             break;
         }
         case OP_SET_LOCAL:
