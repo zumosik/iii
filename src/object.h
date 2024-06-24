@@ -71,10 +71,11 @@ struct ObjString
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length);
 
-typedef struct
+typedef struct ObjUpvalue
 {
     Obj obj;
     Value *location;
+    struct ObjUpvalue* next;
 } ObjUpvalue;
 
 ObjUpvalue *newUpvalue(Value *slot);
