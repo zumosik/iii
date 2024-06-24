@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "object.h"
+#include "value.h"
 
 
 #define GROW_CAPACITY(capacity) \
@@ -25,5 +26,7 @@ void* reallocate(void* pointer, size_t oldSize, size_t newSize);
 void freeObjects(); 
 
 void collectGarbage();
+void markObject(Obj* obj);
+void markValue(Value value);
 
 #endif

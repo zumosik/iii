@@ -11,17 +11,17 @@
 
 static Obj *allocateObject(size_t size, ObjType type)
 {
-    Obj *object = (Obj *)reallocate(NULL, 0, size);
-    object->type = type;
-
-    object->next = vm.objects;
-    vm.objects = object;
+    Obj *obj = (Obj *)reallocate(NULL, 0, size);
+    obj->type = type;
+    obj->isMarked = false;
+    obj->next = vm.objects;
+    vm.objects = obj;
 
     #ifdef DEBUG_LOG_GC
-      printf("%p allocate %ld for %d\n", (void*)object, size, type);
+      printf("%p allocate %ld for %d\n", (void*)obj, size, type);
     #endif /* ifdef DEBUG_LOG_GC */
 
-    return object;
+    return obj;
 }
 
 // FNV-1a hash

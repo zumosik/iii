@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "memory.h"
+#include "value.h"
 #include "vm.h"
 
 #ifdef DEBUG_LOG_GC
@@ -27,6 +28,23 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize)
         exit(1);
 
     return res;
+}
+
+void markObject(Obj *obj) {
+    if (obj == NULL) return;
+    
+    #ifdef DEBUG_LOG_GC
+        printf("%p mark ", (void*)obj);
+        printValue(OBJ_VAL(obj));
+        printf("\n"); 
+    #endif /* ifdef DEBUG_LOG_GC */
+
+    obj->isMarked = true;
+}
+
+void markValue(Value value) {
+    if (!IS_OBJ(value)) return;
+    markObject(AS_OBJ(value));
 }
 
 static void freeObj(Obj *obj)
@@ -79,12 +97,21 @@ void freeObjects()
     }
 }
 
+static void markRoots() {
+    for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+        markValue(*slot);
+    }
+
+    
+    markTable(&vm.globals);
+}
+
 void collectGarbage() {
   #ifdef DEBUG_LOG_GC
     printf(" -- GC begin\n");
   #endif /* ifdef DEBUG_LOG_GC */  
  
-  // ... 
+  markRoots(); 
 
   #ifdef DEBUG_LOG_GC
     printf(" -- GC end\n");
