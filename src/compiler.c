@@ -70,6 +70,7 @@ static void initCompiler(Compiler *compiler, FunctionType type)
     local.depth = 0;
     local.name.start = "";
     local.name.length = 0;
+    local.isCaptured = false;
 
     writeLocalsArray(&compiler->locals, local);
 }
@@ -206,10 +207,15 @@ static void endScope()
     int count = current->locals.count;
 
     while (count > 0 &&
-           current->locals.values[count - 1].depth >
-               current->scopeDepth)
+           current->locals.values[count - 1].depth > current->scopeDepth)
     {
-        emitByte(OP_POP);
+        if (current->locals.values[count-1].isCaptured) 
+        {
+          emitByte(OP_CLOSE_UPVALUE);
+        } else 
+        {
+          emitByte(OP_POP);
+        }
         count--;
     }
 }
@@ -320,6 +326,7 @@ static int resolveUpvalue(Compiler *compiler, Token *name)
     int local = resolveLocal(compiler->enclosing, name);
     if (local != -1)
     {
+        compiler->enclosing->locals.values[local].isCaptured = true;
         return addUpvalue(compiler, (uint16_t)local, true);
     }
 
@@ -337,6 +344,7 @@ static void addLocal(Token name)
     Local local;
     local.depth = -1;
     local.name = name;
+    local.isCaptured = false;
     writeLocalsArray(&current->locals, local);
 }
 

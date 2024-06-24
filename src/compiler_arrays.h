@@ -1,5 +1,5 @@
-#ifndef iii_locals_h // TODO
-#define iii_locals_h
+#ifndef iii_compiler_arrays_h
+#define iii_compiler_arrays_h
 
 #include "scanner.h"
 #include "common.h"
@@ -8,6 +8,7 @@ typedef struct
 {
   Token name;
   int depth;
+  bool isCaptured;
 } Local;
 
 typedef struct
