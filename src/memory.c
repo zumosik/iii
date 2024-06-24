@@ -3,8 +3,19 @@
 #include "memory.h"
 #include "vm.h"
 
+#ifdef DEBUG_LOG_GC
+#include <stdio.h>
+#include "debug.h"
+#endif /* ifdef DEBUG_LOG_GC */
+
 void *reallocate(void *pointer, size_t oldSize, size_t newSize)
 {
+    #ifdef DEBUG_STRESS_GC
+      if (newSize > oldSize) {
+          collectGarbage();
+      }
+    #endif /* ifdef DEBUG_STRESS_GC */
+
     if (newSize == 0)
     {
         free(pointer);
@@ -20,6 +31,10 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize)
 
 static void freeObj(Obj *obj)
 {
+    #ifdef DEBUG_LOG_GC
+        printf("%p free type %d\n", (void*)obj, obj->type);
+    #endif /* ifdef DEBUG_LOG_GC */
+
     switch (obj->type)
     {
     case OBJ_STRING:
@@ -62,4 +77,16 @@ void freeObjects()
         freeObj(object);
         object = next;
     }
+}
+
+void collectGarbage() {
+  #ifdef DEBUG_LOG_GC
+    printf(" -- GC begin\n");
+  #endif /* ifdef DEBUG_LOG_GC */  
+ 
+  // ... 
+
+  #ifdef DEBUG_LOG_GC
+    printf(" -- GC end\n");
+  #endif /* ifdef DEBUG_LOG_GC */  
 }

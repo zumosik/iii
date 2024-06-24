@@ -473,7 +473,6 @@ InterpretResult interpret(const char *source)
     if (func == NULL)
         return INTERPRET_COMPILE_ERROR;
 
-    printf("end compiler");
 
     push(OBJ_VAL(func));
     ObjClosure *closure = newClosure(func);
