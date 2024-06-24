@@ -1,3 +1,4 @@
+#include "chunk.h"
 #include "common.h"
 #include "vm.h"
 #include "debug.h"
@@ -8,6 +9,7 @@
 #include "memory.h"
 #include "compiler.h"
 #include "time.h"
+#include "value.h"
 
 VM vm;
 
@@ -182,6 +184,17 @@ static ObjUpvalue *captureUpvalue(Value *local)
     return createdUpvalue;
 }
 
+static void closeUpvalues(Value* last) {
+  while (
+    vm.openUpvalues != NULL && vm.openUpvalues->location >= last
+  ) {
+    ObjUpvalue *upvalue = vm.openUpvalues;
+    upvalue->closed = *upvalue->location;
+    upvalue->location = &upvalue->closed;
+    vm.openUpvalues = upvalue->next;
+  }
+}
+
 static bool isFalsey(Value value)
 {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
@@ -263,6 +276,7 @@ static InterpretResult run()
         case OP_RETURN:
         {
             Value result = pop();
+            closeUpvalues(frame->slots);
             vm.frameCount--;
             if (vm.frameCount == 0)
             {
@@ -436,6 +450,12 @@ static InterpretResult run()
             uint16_t slot = READ_SHORT();
             *frame->closure->upvalues[slot]->location = peek(0);
             break;
+        }
+        case OP_CLOSE_UPVALUE:
+        {
+          closeUpvalues(vm.stackTop - 1);
+          pop();
+          break;
         }
         }
     }

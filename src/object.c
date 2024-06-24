@@ -4,6 +4,7 @@
 #include "value.h"
 #include "vm.h"
 #include "table.h"
+#include <stdio.h>
 
 #define ALLOCATE_OBJ(type, objectType) \
     (type *)allocateObject(sizeof(type), objectType)
@@ -147,5 +148,6 @@ ObjUpvalue *newUpvalue(Value *slot)
     ObjUpvalue *upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
     upvalue->location = slot;
     upvalue->next = NULL;
+    upvalue->closed = NIL_VAL;
     return upvalue;
 }
