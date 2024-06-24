@@ -25,6 +25,8 @@ typedef enum
     OP_GET_UPVALUE, // get upvalue
     OP_SET_UPVALUE, // set upvalue
 
+    OP_CLOSE_UPVALUE, // close upvalue (isn't on stack anymore)
+
     OP_NIL,   // nil
     OP_TRUE,  // true
     OP_FALSE, // false
