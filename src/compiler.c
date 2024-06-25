@@ -34,7 +34,9 @@ typedef struct Compiler
     ObjFunc *function;
     FunctionType type;
 
-    LocalsArray locals;
+    // locals and upvalues arrays are temporary
+    // memory will be freed when compiler ends
+    LocalsArray locals; 
     UpvaluesArray upvalues;
 
     int scopeDepth;
@@ -952,7 +954,7 @@ ObjFunc *compile(const char *source)
     ObjFunc *func = endCompiler();
     freeUpvaluesArray(&compiler.upvalues);
     
-     return parser.hadError ? NULL : func;
+    return parser.hadError ? NULL : func;
 }
 
 void markCompilerRoots() {
