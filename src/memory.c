@@ -213,6 +213,8 @@ void collectGarbage() {
     markRoots();
     // trace references of roots 
     trackReferences();
+    // vm.strings have different behaviour (weak reference)
+    tableRemoveWhite(&vm.strings);
     // sweep (delete) unmarked objects
     sweep();
 
