@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "scanner.h"
 #include "chunk.h"
 #include "object.h"
@@ -33,7 +34,9 @@ typedef struct Compiler
     ObjFunc *function;
     FunctionType type;
 
-    LocalsArray locals;
+    // locals and upvalues arrays are temporary
+    // memory will be freed when compiler ends
+    LocalsArray locals; 
     UpvaluesArray upvalues;
 
     int scopeDepth;
@@ -951,5 +954,13 @@ ObjFunc *compile(const char *source)
     ObjFunc *func = endCompiler();
     freeUpvaluesArray(&compiler.upvalues);
     
-     return parser.hadError ? NULL : func;
+    return parser.hadError ? NULL : func;
+}
+
+void markCompilerRoots() {
+    Compiler* compiler = current;
+    while( compiler != NULL ) {
+        markObject((Obj*)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }

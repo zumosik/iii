@@ -30,6 +30,7 @@ struct Obj
 {
     ObjType type;
     struct Obj *next;
+    bool isMarked;
 };
 
 static inline bool isObjType(Value value, ObjType type)

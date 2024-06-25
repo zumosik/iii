@@ -34,5 +34,7 @@ static ParseRule *getRule(TokenType type);
 static void statement();
 static void declaration();
 
+// mark all compiler roots for GC
+void markCompilerRoots();
 
 #endif

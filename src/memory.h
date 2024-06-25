@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "object.h"
+#include "value.h"
 
 
 #define GROW_CAPACITY(capacity) \
@@ -23,5 +24,15 @@
 
 void* reallocate(void* pointer, size_t oldSize, size_t newSize);
 void freeObjects(); 
+
+// NOTE:
+// speaking of GC in code I use white, gray and black to mark status of objects 
+// white - haven't reached or processed object at all 
+// gray  - reachable, but we haven't traced through it 
+// black - mark phase done for this object 
+
+void collectGarbage();
+void markObject(Obj* obj);
+void markValue(Value value);
 
 #endif

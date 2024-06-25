@@ -28,4 +28,9 @@ ObjString* tableFindString(Table* table, const char* chars, int length, uint32_t
 
 void tableAddAll(Table *from, Table *to);
 
+// mark all entry keys and values for GC  
+void markTable(Table* table);
+
+void tableRemoveWhite(Table* table);
+
 #endif //iii_table_h

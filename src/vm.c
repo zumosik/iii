@@ -99,7 +99,15 @@ void initVM()
     vm.objects = NULL;
     initTable(&vm.strings);
     initTable(&vm.globals);
+   
+    vm.grayCount = 0;
+    vm.grayCapacity = 0;
+    vm.grayStack = NULL;
 
+    vm.bytesAllocated = 0;
+    vm.nextGC = GC_BEFORE_FIRST;
+
+    // -----------------------------------
     defineNative("clock", clockNative);
     defineNative("print", printNative);
 }
@@ -202,14 +210,16 @@ static bool isFalsey(Value value)
 
 static void concatenate()
 {
-    ObjString *b = AS_STRING(pop());
-    ObjString *a = AS_STRING(pop());
-
-    int length = a->length + b->length;
+    ObjString* b = AS_STRING(peek(0));
+    ObjString* a = AS_STRING(peek(1));    int length = a->length + b->length;
+    
     char *chars = ALLOCATE(char, length + 1);
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
+
+    pop();
+    pop();
 
     ObjString *result = takeString(chars, length);
     push(OBJ_VAL(result));
@@ -473,7 +483,6 @@ InterpretResult interpret(const char *source)
     if (func == NULL)
         return INTERPRET_COMPILE_ERROR;
 
-    printf("end compiler");
 
     push(OBJ_VAL(func));
     ObjClosure *closure = newClosure(func);
