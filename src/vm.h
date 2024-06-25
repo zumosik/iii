@@ -39,6 +39,10 @@ typedef struct
 
     ObjUpvalue *openUpvalues; // all open upvalues 
 
+    // variables to now when call GC
+    size_t bytesAllocated;
+    size_t nextGC;
+
     Obj *objects; // objects 
 
     // for GC

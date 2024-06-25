@@ -104,6 +104,9 @@ void initVM()
     vm.grayCapacity = 0;
     vm.grayStack = NULL;
 
+    vm.bytesAllocated = 0;
+    vm.nextGC = GC_BEFORE_FIRST;
+
     // -----------------------------------
     defineNative("clock", clockNative);
     defineNative("print", printNative);
