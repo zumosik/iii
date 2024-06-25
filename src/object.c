@@ -111,6 +111,9 @@ void printObject(Value value) {
     case OBJ_UPVALUE:
       printf("upvalue");
       break;
+    case OBJ_CLASS:
+      printf("%s", AS_CLASS(value)->name->chars);
+      break;
     default:
       printf("Unknown object type\n");
   }
@@ -142,4 +145,10 @@ ObjUpvalue *newUpvalue(Value *slot) {
   upvalue->next = NULL;
   upvalue->closed = NIL_VAL;
   return upvalue;
+}
+
+ObjClass *newClass(ObjString *name) {
+  ObjClass *class = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+  class->name = name;
+  return class;
 }

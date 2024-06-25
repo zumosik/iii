@@ -10,8 +10,6 @@
 
 #ifdef DEBUG_LOG_GC
 #include <stdio.h>
-
-#include "debug.h"
 #endif /* ifdef DEBUG_LOG_GC */
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
@@ -103,6 +101,9 @@ static void freeObj(Obj *obj) {
     case OBJ_UPVALUE:
       FREE(ObjUpvalue, obj);
       break;
+    case OBJ_CLASS:
+      FREE(ObjClass, obj);
+      break;
     default:
       break;
   }
@@ -170,6 +171,11 @@ void blackenObject(Obj *obj) {
       for (int i = 0; i < closure->upvalueCount; i++) {
         markObject((Obj *)closure->upvalues[i]);
       }
+      break;
+    }
+    case OBJ_CLASS: {
+      ObjClass *class = (ObjClass *)obj;
+      markObject((Obj *)class->name);
       break;
     }
   }
