@@ -2,9 +2,9 @@
 #define iii_vm_h
 
 #include "chunk.h"
-#include "value.h"
 #include "object.h"
 #include "table.h"
+#include "value.h"
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 
@@ -12,43 +12,40 @@
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
 // Stack overflow handling only for frames
 
-typedef struct
-{
-    ObjClosure *closure;
-    uint8_t *ip;
-    Value *slots;
+typedef struct {
+  ObjClosure *closure;
+  uint8_t *ip;
+  Value *slots;
 } CallFrame;
 
-typedef enum
-{
-    INTERPRET_OK,
-    INTERPRET_COMPILE_ERROR,
-    INTERPRET_RUNTIME_ERROR
+typedef enum {
+  INTERPRET_OK,
+  INTERPRET_COMPILE_ERROR,
+  INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
-typedef struct
-{
-    CallFrame frames[FRAMES_MAX]; // frames 
-    int frameCount; // count of frames 
+typedef struct {
+  CallFrame frames[FRAMES_MAX];  // frames
+  int frameCount;                // count of frames
 
-    Value stack[STACK_MAX]; // stack 
-    Value *stackTop; // pointer to stack top 
+  Value stack[STACK_MAX];  // stack
+  Value *stackTop;         // pointer to stack top
 
-    Table strings; // table of strings (for optimization)
-    Table globals; // table of globals 
+  Table strings;  // table of strings (for optimization)
+  Table globals;  // table of globals
 
-    ObjUpvalue *openUpvalues; // all open upvalues 
+  ObjUpvalue *openUpvalues;  // all open upvalues
 
-    // variables to now when call GC
-    size_t bytesAllocated;
-    size_t nextGC;
+  // variables to now when call GC
+  size_t bytesAllocated;
+  size_t nextGC;
 
-    Obj *objects; // objects 
+  Obj *objects;  // objects
 
-    // for GC
-    int grayCount; 
-    int grayCapacity;
-    Obj** grayStack;
+  // for GC
+  int grayCount;
+  int grayCapacity;
+  Obj **grayStack;
 } VM;
 
 extern VM vm;

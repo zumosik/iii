@@ -7,14 +7,14 @@
 #include "value.h"
 
 typedef struct {
-    ObjString * key;
-    Value value;
+  ObjString *key;
+  Value value;
 } Entry;
 
-typedef struct  {
-    int count;
-    int capacity;
-    Entry *entries;
+typedef struct {
+  int count;
+  int capacity;
+  Entry *entries;
 } Table;
 
 void initTable(Table *table);
@@ -22,15 +22,16 @@ void freeTable(Table *table);
 
 bool tableSet(Table *table, ObjString *key, Value value);
 bool tableGet(Table *table, ObjString *key, Value *value);
-bool tableDelete(Table* table, ObjString* key);
+bool tableDelete(Table *table, ObjString *key);
 
-ObjString* tableFindString(Table* table, const char* chars, int length, uint32_t hash);
+ObjString *tableFindString(Table *table, const char *chars, int length,
+                           uint32_t hash);
 
 void tableAddAll(Table *from, Table *to);
 
-// mark all entry keys and values for GC  
-void markTable(Table* table);
+// mark all entry keys and values for GC
+void markTable(Table *table);
 
-void tableRemoveWhite(Table* table);
+void tableRemoveWhite(Table *table);
 
-#endif //iii_table_h
+#endif  // iii_table_h

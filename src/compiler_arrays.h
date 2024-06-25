@@ -1,31 +1,27 @@
 #ifndef iii_compiler_arrays_h
 #define iii_compiler_arrays_h
 
-#include "scanner.h"
 #include "common.h"
+#include "scanner.h"
 
-typedef struct
-{
+typedef struct {
   Token name;
   int depth;
   bool isCaptured;
 } Local;
 
-typedef struct
-{
+typedef struct {
   uint16_t index;
   bool isLocal;
 } Upvalue;
 
-typedef struct
-{
+typedef struct {
   int capacity;
   int count;
   Local *values;
 } LocalsArray;
 
-typedef struct
-{
+typedef struct {
   int capacity;
   int count;
   Upvalue *values;

@@ -6,30 +6,27 @@
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
 
-typedef enum
-{
-    VAL_BOOL,
-    VAL_NIL,
-    VAL_NUM,
-    VAL_OBJ,
+typedef enum {
+  VAL_BOOL,
+  VAL_NIL,
+  VAL_NUM,
+  VAL_OBJ,
 } ValueType;
 
-typedef struct
-{
-    ValueType type;
-    union
-    {
-        bool boolean;
-        double number;
-        Obj* obj;
-    } as;
+typedef struct {
+  ValueType type;
+  union {
+    bool boolean;
+    double number;
+    Obj *obj;
+  } as;
 } Value;
 
 // Macro stuff
 #define BOOL_VAL(val) ((Value){VAL_BOOL, {.boolean = val}})
 #define NIL_VAL ((Value){VAL_NIL, {.number = 0}})
 #define NUM_VAL(val) ((Value){VAL_NUM, {.number = val}})
-#define OBJ_VAL(object) ((Value){VAL_OBJ, {.obj = (Obj*)object}})
+#define OBJ_VAL(object) ((Value){VAL_OBJ, {.obj = (Obj *)object}})
 
 #define AS_BOOL(val) ((val).as.boolean)
 #define AS_NUM(val) ((val).as.number)
@@ -40,11 +37,10 @@ typedef struct
 #define IS_NUMBER(value) ((value).type == VAL_NUM)
 #define IS_OBJ(value) ((value).type == VAL_OBJ)
 
-typedef struct
-{
-    int capacity;
-    int count;
-    Value *values;
+typedef struct {
+  int capacity;
+  int count;
+  Value *values;
 } ValueArray;
 
 bool valuesEqual(Value a, Value b);
@@ -53,6 +49,5 @@ void writeValueArray(ValueArray *array, Value value);
 void freeValueArray(ValueArray *array);
 
 void printValue(Value value);
-
 
 #endif
