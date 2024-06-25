@@ -5,6 +5,7 @@
 
 #include "compiler.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
@@ -52,7 +53,7 @@ void markObject(Obj *obj) {
     vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
     vm.grayStack = realloc(vm.grayStack, vm.grayCapacity * sizeof(Obj *));
     if (vm.grayStack == NULL) {  // some problems with allocating = aborting
-      perror("Gray stack problem (FATAL)");
+      perror("Gray stack problem (FATAL)\n");
       exit(1);
     }
   }
@@ -104,6 +105,12 @@ static void freeObj(Obj *obj) {
     case OBJ_CLASS:
       FREE(ObjClass, obj);
       break;
+    case OBJ_INSTANCE: {
+      ObjInstance *instance = (ObjInstance *)obj;
+      freeTable(&instance->fields);
+      FREE(ObjInstance, obj);
+      break;
+    }
     default:
       break;
   }
@@ -176,6 +183,12 @@ void blackenObject(Obj *obj) {
     case OBJ_CLASS: {
       ObjClass *class = (ObjClass *)obj;
       markObject((Obj *)class->name);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      ObjInstance *instance = (ObjInstance *)obj;
+      markObject((Obj *)instance->cclass);
+      markTable(&instance->fields);
       break;
     }
   }
