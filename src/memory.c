@@ -76,7 +76,7 @@ static void markArray(ValueArray* array) {
 static void freeObj(Obj *obj)
 {
     #ifdef DEBUG_LOG_GC
-        printf("%p free type %d\n", (void*)obj, obj->type);
+        printf("%p free type %d ", (void*)obj, obj->type);
         printValue(OBJ_VAL(obj));
         printf("\n");
     #endif /* ifdef DEBUG_LOG_GC */
@@ -152,7 +152,7 @@ static void markRoots() {
 
 void blackenObject(Obj* obj) {
     #ifdef DEBUG_LOG_GC
-         printf("%p blacken", (void*)obj);
+         printf("%p blacken\n", (void*)obj);
     
     #endif /* ifdef DEBUG_LOG_GC */
 
@@ -229,6 +229,6 @@ void collectGarbage() {
     #ifdef DEBUG_LOG_GC
         printf(" -- GC end\n");
         size_t before = vm.bytesAllocated;
-        printf("  collected %ld bytes (from &ld to &ld) next at %ld", before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
+        printf("  collected %ld bytes (from %ld to %ld) next at %ld\n\n", before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
     #endif /* ifdef DEBUG_LOG_GC */  
 }
