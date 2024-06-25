@@ -1,6 +1,8 @@
+// #include <cstddef>
 #include <stdlib.h>
-
+#include "compiler.h"
 #include "memory.h"
+#include "object.h"
 #include "value.h"
 #include "vm.h"
 
@@ -98,12 +100,26 @@ void freeObjects()
 }
 
 static void markRoots() {
+    // stack
     for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
         markValue(*slot);
     }
 
+    // closures
+    for (int i = 0; i < vm.frameCount; i++) {
+      markObject((Obj*)vm.frames[i].closure);
+    }
+
+    // open upvalues 
+    for (ObjUpvalue* upvalue = vm.openUpvalues; upvalue != NULL; upvalue = upvalue->next) {
+        markObject((Obj*)upvalue); 
+    }
     
+    // table of globals
     markTable(&vm.globals);
+
+    // mark compiler roots 
+    markCompilerRoots(); 
 }
 
 void collectGarbage() {

@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "scanner.h"
 #include "chunk.h"
 #include "object.h"
@@ -952,4 +953,12 @@ ObjFunc *compile(const char *source)
     freeUpvaluesArray(&compiler.upvalues);
     
      return parser.hadError ? NULL : func;
+}
+
+void markCompilerRoots() {
+    Compiler* compiler = current;
+    while( compiler != NULL ) {
+        markObject((Obj*)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }
