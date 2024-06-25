@@ -28,20 +28,21 @@ typedef enum
 
 typedef struct
 {
-    CallFrame frames[FRAMES_MAX];
-    int frameCount;
+    CallFrame frames[FRAMES_MAX]; // frames 
+    int frameCount; // count of frames 
 
-    Value stack[STACK_MAX];
-    Value *stackTop;
+    Value stack[STACK_MAX]; // stack 
+    Value *stackTop; // pointer to stack top 
 
-    Table strings;
-    Table globals;
+    Table strings; // table of strings (for optimization)
+    Table globals; // table of globals 
 
-    ObjUpvalue *openUpvalues;
+    ObjUpvalue *openUpvalues; // all open upvalues 
 
-    Obj *objects;
+    Obj *objects; // objects 
 
-    int grayCount;
+    // for GC
+    int grayCount; 
     int grayCapacity;
     Obj** grayStack;
 } VM;
