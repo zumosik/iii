@@ -5,11 +5,9 @@
 #include "value.h"
 
 // OP_CONSTANT, OP_DEFINE_GLOBAL, OP_GET_GLOBAL, OP_SET_GLOBAL,
-// OP_SET_LOCAL, OP_GET_LOCAL, OP_CLOSURE, OP_GET_UPVALUE, OP_SET_UPVALUE
-// all uses 2 bytes for the constant index
-// it wastes 256 bytes of memory in worst scenario
-// (we could do instruction with 1 byte and instruction_long with 2 bytes)
-// but it's not a big deal (can be optimized later if needed)
+// OP_SET_LOCAL, OP_GET_LOCAL, OP_CLOSURE, OP_GET_UPVALUE, OP_SET_UPVALUE,
+// OP_CLASS all uses 2 bytes for the constant index it wastes some memory but
+// it's not a big deal (can be optimized later if needed)
 
 typedef enum {
   OP_CONSTANT,  // push a constant to the stack
@@ -50,7 +48,9 @@ typedef enum {
 
   OP_CALL,  // call a function
 
-  OP_CLOSURE,
+  OP_CLOSURE,  // create a closure
+
+  OP_CLASS,  // create a class
 
   OP_LOOP,  // works like jump but with negative offset
 

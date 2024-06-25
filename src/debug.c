@@ -134,6 +134,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
       return byteInstructionLong("OP_SET_UPVALUE", chunk, offset);
     case OP_CLOSE_UPVALUE:
       return simpleInstruction("OP_CLOSE_UPVALUE", offset);
+    case OP_CLASS:
+      return longConstantInstruction("OP_CLASS", chunk, offset);
     default:
       printf("Unknown opcode %d\n", instruction);
       return offset + 1;

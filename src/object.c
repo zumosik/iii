@@ -112,7 +112,7 @@ void printObject(Value value) {
       printf("upvalue");
       break;
     case OBJ_CLASS:
-      printf("%s", AS_CLASS(value)->name->chars);
+      printf("<class %s>", AS_CLASS(value)->name->chars);
       break;
     default:
       printf("Unknown object type\n");

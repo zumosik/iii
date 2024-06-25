@@ -389,6 +389,19 @@ static void function(FunctionType type) {
   freeUpvaluesArray(&compiler.upvalues);
 }
 
+static void classDeclaration() {
+  consume(TOKEN_IDENTIFIER, "Expect class name");
+  uint16_t nameConstant = identifierConstant(&parser.previous);
+
+  emitByte(OP_CLASS);
+  emitBytes((nameConstant >> 8) & 0xff, nameConstant >> 8);
+  defineVar(nameConstant);
+
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before class body");
+  // ...
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body");
+}
+
 static void fnDeclaration() {
   uint16_t global = parseVar("Expect function name");
   markInitialized();
@@ -430,7 +443,7 @@ static void synchronize() {
       case TOKEN_RETURN:
         return;
       default:
-          // Do nothing.
+          // do nothing
           ;
     }
     advance();
@@ -442,9 +455,12 @@ static void declaration() {
     varDeclaration();
   } else if (match(TOKEN_FN)) {
     fnDeclaration();
+  } else if (match(TOKEN_CLASS)) {
+    classDeclaration();
   } else {
     statement();
   }
+
   if (parser.panicMode) {
     synchronize();
   }
