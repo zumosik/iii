@@ -56,8 +56,9 @@ typedef enum {
   OP_CLOSURE,  // create a closure
   OP_INVOKE,   // invoke method
 
-  OP_CLASS,   // create a class
-  OP_METHOD,  // define method of a class
+  OP_CLASS,    // create a class
+  OP_METHOD,   // define method of a class
+  OP_INHERIT,  // inherit class from another
 } OpCode;
 
 typedef struct {
