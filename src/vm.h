@@ -38,6 +38,8 @@ typedef struct {
   Table strings;  // table of strings (for optimization)
   Table globals;  // table of globals
 
+  ObjString *initString;  // init method name
+
   ObjUpvalue *openUpvalues;  // all open upvalues
 
   // variables to now when call GC

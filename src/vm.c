@@ -87,6 +87,9 @@ void initVM() {
   initTable(&vm.strings);
   initTable(&vm.globals);
 
+  vm.initString = NULL;  // just to be safe from GC
+  vm.initString = copyString(INIT_STRING, INIT_STRING_LEN);
+
   vm.grayCount = 0;
   vm.grayCapacity = 0;
   vm.grayStack = NULL;
@@ -103,6 +106,7 @@ void freeVM() {
   freeObjects();  // free all objects
   freeTable(&vm.strings);
   freeTable(&vm.globals);
+  vm.initString = NULL;
 }
 
 static bool call(ObjClosure *closure, int argCount) {
@@ -137,8 +141,16 @@ static bool callValue(Value callee, int argCount) {
         return true;
       }
       case OBJ_CLASS: {  // creating a class
-        ObjClass *cclas = AS_CLASS(callee);
-        vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(cclas));
+        ObjClass *cclass = AS_CLASS(callee);
+        vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(cclass));
+
+        Value initializer;
+        if (tableGet(&cclass->methods, vm.initString, &initializer)) {
+          return call(AS_CLOSURE(initializer), argCount);
+        } else if (argCount != 0) {
+          runtimeError("Expected 0 arguments but got %d", argCount);
+        }
+
         return true;
       }
       case OBJ_BOUND_METHOD: {

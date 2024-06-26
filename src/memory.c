@@ -157,6 +157,9 @@ static void markRoots() {
 
   // mark compiler roots
   markCompilerRoots();
+
+  // small, but useful object
+  markObject((Obj *)vm.initString);
 }
 
 void blackenObject(Obj *obj) {

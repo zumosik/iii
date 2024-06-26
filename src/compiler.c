@@ -21,7 +21,12 @@ typedef struct {
 
 Parser parser;
 
-typedef enum { TYPE_FUNCTION, TYPE_METHOD, TYPE_SCRIPT } FunctionType;
+typedef enum {
+  TYPE_FUNCTION,
+  TYPE_METHOD,
+  TYPE_INITIALIZER,
+  TYPE_SCRIPT
+} FunctionType;
 
 typedef struct Compiler {
   struct Compiler *enclosing;
@@ -136,7 +141,17 @@ static void emitShort(uint16_t val) {
   emitBytes((val >> 8) & 0xff, val & 0xff);
 }
 
-static void emitReturn() { emitBytes(OP_NIL, OP_RETURN); }
+static void emitReturn() {
+  // if we are in initializer return this for user
+  if (current->type == TYPE_INITIALIZER) {
+    emitByte(OP_GET_LOCAL);
+    emitShort(0);
+  } else {
+    emitByte(OP_NIL);
+  }
+
+  emitByte(OP_RETURN);
+}
 
 static int emitJump(uint8_t instruction) {
   emitByte(instruction);
@@ -439,6 +454,10 @@ static void method() {
   uint16_t constant = identifierConstant(&parser.previous);
 
   FunctionType type = TYPE_METHOD;
+  if (parser.previous.length == INIT_STRING_LEN &&
+      memcmp(parser.previous.start, INIT_STRING, INIT_STRING_LEN) == 0) {
+    type = TYPE_INITIALIZER;
+  }
   function(type);
 
   emitByte(OP_METHOD);
@@ -653,6 +672,10 @@ static void returnStatement() {
   if (match(TOKEN_SEMICOLON)) {
     emitReturn();
   } else {
+    if (current->type == TYPE_INITIALIZER) {
+      error("Can't return a value from an initializer");
+    }
+
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after return value");
     emitByte(OP_RETURN);
