@@ -140,6 +140,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
       return longConstantInstruction("OP_GET_PROPERTY", chunk, offset);
     case OP_SET_PROPERTY:
       return longConstantInstruction("OP_SET_PROPERTY", chunk, offset);
+    case OP_METHOD:
+      return longConstantInstruction("OP_METHOD", chunk, offset);
     default:
       printf("Unknown opcode %d\n", instruction);
       return offset + 1;
