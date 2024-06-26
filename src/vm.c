@@ -10,6 +10,7 @@
 #include "memory.h"
 #include "object.h"
 #include "string.h"
+#include "table.h"
 #include "time.h"
 #include "value.h"
 
@@ -413,6 +414,40 @@ static InterpretResult run() {
       case OP_CLASS:
         push(OBJ_VAL(newClass(READ_STRING_LONG())));
         break;
+      case OP_GET_PROPERTY: {
+        if (!IS_INSTANCE(peek(0))) {
+          runtimeError("Obly instances can have properties");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        ObjInstance *instance = AS_INSTANCE(peek(0));
+        ObjString *name = READ_STRING_LONG();
+        Value val;
+
+        if (tableGet(&instance->fields, name, &val)) {
+          pop();  // pop instance
+          push(val);
+          break;
+        }
+
+        // property not found:
+        runtimeError("Undefined property '%s'", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      case OP_SET_PROPERTY: {
+        if (!IS_INSTANCE(peek(1))) {
+          runtimeError("Obly instances can have fields");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        ObjInstance *instance = AS_INSTANCE(peek(1));
+        tableSet(&instance->fields, READ_STRING_LONG(), peek(0));
+
+        Value val = pop();
+        pop();
+        push(val);
+        break;
+      }
     }
   }
 
