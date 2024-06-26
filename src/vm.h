@@ -6,6 +6,10 @@
 #include "table.h"
 #include "value.h"
 
+// NOTE:
+// VM wouldn't validate any bytecode
+// so unvalid bytecode can lead to crash or very unxecped behaviour
+
 #define UINT8_COUNT (UINT8_MAX + 1)
 
 #define FRAMES_MAX 64
@@ -33,6 +37,8 @@ typedef struct {
 
   Table strings;  // table of strings (for optimization)
   Table globals;  // table of globals
+
+  ObjString *initString;  // init method name
 
   ObjUpvalue *openUpvalues;  // all open upvalues
 

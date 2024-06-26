@@ -1,5 +1,6 @@
 #include "compiler.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +22,12 @@ typedef struct {
 
 Parser parser;
 
-typedef enum { TYPE_FUNCTION, TYPE_SCRIPT } FunctionType;
+typedef enum {
+  TYPE_FUNCTION,
+  TYPE_METHOD,
+  TYPE_INITIALIZER,
+  TYPE_SCRIPT
+} FunctionType;
 
 typedef struct Compiler {
   struct Compiler *enclosing;
@@ -37,7 +43,14 @@ typedef struct Compiler {
   int scopeDepth;
 } Compiler;
 
+typedef struct ClassCompiler {
+  struct ClassCompiler *enclosing;
+  Token name;
+  bool hasSuperClass;
+} ClassCompiler;
+
 Compiler *current = NULL;
+ClassCompiler *currentClass = NULL;
 
 static Chunk *currentChunk() { return &current->function->chunk; }
 
@@ -61,9 +74,15 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
 
   Local local;
   local.depth = 0;
-  local.name.start = "";
-  local.name.length = 0;
   local.isCaptured = false;
+
+  if (type != TYPE_SCRIPT) {
+    local.name.start = "this";
+    local.name.length = 4;
+  } else {
+    local.name.start = "";
+    local.name.length = 0;
+  }
 
   writeLocalsArray(&compiler->locals, local);
 }
@@ -120,7 +139,21 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
   emitByte(byte2);
 }
 
-static void emitReturn() { emitBytes(OP_NIL, OP_RETURN); }
+static void emitShort(uint16_t val) {
+  emitBytes((val >> 8) & 0xff, val & 0xff);
+}
+
+static void emitReturn() {
+  // if we are in initializer return this for user
+  if (current->type == TYPE_INITIALIZER) {
+    emitByte(OP_GET_LOCAL);
+    emitShort(0);
+  } else {
+    emitByte(OP_NIL);
+  }
+
+  emitByte(OP_RETURN);
+}
 
 static int emitJump(uint8_t instruction) {
   emitByte(instruction);
@@ -133,8 +166,7 @@ static void emitLoop(int loopStart) {
   emitByte(OP_LOOP);
   int offset = currentChunk()->count - loopStart + 2;
   if (offset > UINT16_MAX) error("Loop body is too large");
-  emitByte((offset >> 8) & 0xff);
-  emitByte(offset & 0xff);
+  emitShort((uint16_t)offset);
 }
 
 // ! endCompiler would not free upvalues array
@@ -213,7 +245,7 @@ static uint16_t makeConstant(Value val) {
   return (uint16_t)addConst(currentChunk(), val);
 }
 
-static int identifierConstant(Token *name) {
+static uint16_t identifierConstant(Token *name) {
   return (int)makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
@@ -321,10 +353,11 @@ static void defineVar(uint16_t global) {
   }
 
   emitByte(OP_DEFINE_GLOBAL);
-  emitBytes((global >> 8) & 0xff, global & 0xff);
+  emitShort(global);
 }
 
 static uint8_t argumentList() {
+  // FIXME: you can have more than 256 vars
   uint8_t argCount = 0;
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
@@ -332,7 +365,6 @@ static uint8_t argumentList() {
 
       if (argCount == 255) {
         error("Can't have more than 255 arguments");
-        // if you need more than 255 arguments, you're doing something wrong :)
       }
 
       argCount++;
@@ -349,6 +381,44 @@ static uint16_t parseVar(const char *errorMessage) {
   if (current->scopeDepth > 0) return 0;
 
   return identifierConstant(&parser.previous);
+}
+
+static void namedVar(Token name, bool canAssign) {
+  uint8_t getOp, setOp;
+
+  uint16_t argUint = 0;
+
+  int arg = resolveLocal(current, &name);
+  if (arg != -1) {
+    getOp = OP_GET_LOCAL;
+    setOp = OP_SET_LOCAL;
+    argUint = (uint16_t)arg;
+  } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+    getOp = OP_GET_UPVALUE;
+    setOp = OP_SET_UPVALUE;
+    argUint = (uint16_t)arg;
+  } else {  // global var
+    argUint = identifierConstant(&name);
+    getOp = OP_GET_GLOBAL;
+    setOp = OP_SET_GLOBAL;
+  }
+
+  if (canAssign && match(TOKEN_EQUAL))  // x = ...
+  {
+    expression();
+    emitByte(setOp);
+    emitShort(argUint);
+  } else {
+    emitByte(getOp);
+    emitShort(argUint);
+  }
+}
+
+static Token syntheticToken(const char *text) {
+  Token token;
+  token.start = text;
+  token.length = (int)strlen(text);
+  return token;
 }
 
 static void function(FunctionType type) {
@@ -377,16 +447,80 @@ static void function(FunctionType type) {
   uint16_t constant = makeConstant(OBJ_VAL(func));
 
   emitByte(OP_CLOSURE);
-  emitBytes((constant >> 8) & 0xff, constant & 0xff);
+  emitShort(constant);
 
   uint16_t count = func->upvalueCount;
   for (int i = 0; i < count; i++) {
     emitByte(compiler.upvalues.values[i].isLocal ? 1 : 0);
-    emitBytes((compiler.upvalues.values[i].index >> 8) & 0xff,
-              compiler.upvalues.values[i].index & 0xff);
+    emitShort(compiler.upvalues.values[i].index);
   }
 
   freeUpvaluesArray(&compiler.upvalues);
+}
+
+static void method() {
+  consume(TOKEN_IDENTIFIER, "Expect method name");
+  uint16_t constant = identifierConstant(&parser.previous);
+
+  FunctionType type = TYPE_METHOD;
+  if (parser.previous.length == INIT_STRING_LEN &&
+      memcmp(parser.previous.start, INIT_STRING, INIT_STRING_LEN) == 0) {
+    type = TYPE_INITIALIZER;
+  }
+  function(type);
+
+  emitByte(OP_METHOD);
+  emitShort(constant);
+}
+
+static void classDeclaration() {
+  consume(TOKEN_IDENTIFIER, "Expect class name");
+
+  Token className = parser.previous;
+
+  uint16_t nameConstant = identifierConstant(&parser.previous);
+
+  emitByte(OP_CLASS);
+  emitShort(nameConstant);
+  defineVar(nameConstant);
+
+  ClassCompiler classCompiler;
+  classCompiler.name = parser.previous;
+  classCompiler.enclosing = currentClass;
+  classCompiler.hasSuperClass = false;
+  currentClass = &classCompiler;
+
+  if (match(TOKEN_MINUS)) {
+    consume(TOKEN_IDENTIFIER, "Expect superclass name");
+    namedVar(parser.previous, false);
+
+    if (identifiersEqual(&className, &parser.previous)) {
+      error("Class can't inherit from itself");
+    }
+
+    beginScope();
+    addLocal(syntheticToken("super"));
+    defineVar(0);
+
+    namedVar(className, false);
+    emitByte(OP_INHERIT);
+    classCompiler.hasSuperClass = true;
+  }
+
+  namedVar(className, false);  // push class name
+
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before class body");
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    method();
+  }
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body");
+  emitByte(OP_POP);  // pop class name
+
+  if (classCompiler.hasSuperClass) {
+    endScope();
+  }
+
+  currentClass = currentClass->enclosing;
 }
 
 static void fnDeclaration() {
@@ -430,7 +564,7 @@ static void synchronize() {
       case TOKEN_RETURN:
         return;
       default:
-          // Do nothing.
+          // do nothing
           ;
     }
     advance();
@@ -442,9 +576,12 @@ static void declaration() {
     varDeclaration();
   } else if (match(TOKEN_FN)) {
     fnDeclaration();
+  } else if (match(TOKEN_CLASS)) {
+    classDeclaration();
   } else {
     statement();
   }
+
   if (parser.panicMode) {
     synchronize();
   }
@@ -566,6 +703,10 @@ static void returnStatement() {
   if (match(TOKEN_SEMICOLON)) {
     emitReturn();
   } else {
+    if (current->type == TYPE_INITIALIZER) {
+      error("Can't return a value from an initializer");
+    }
+
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after return value");
     emitByte(OP_RETURN);
@@ -682,40 +823,63 @@ static void literal(bool canAssign) {
   }
 }
 
+static void dot(bool canAssign) {
+  consume(TOKEN_IDENTIFIER, "Expect propery name after '.'");
+  uint16_t name = identifierConstant(&parser.previous);
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    expression();
+    emitByte(OP_SET_PROPERTY);
+    emitShort(name);
+  } else if (match(TOKEN_LEFT_PAREN)) {  // if you want to call method
+    uint8_t argCount = argumentList();
+    emitByte(OP_INVOKE);
+    emitShort(name);
+    emitByte(argCount);
+  } else {
+    emitByte(OP_GET_PROPERTY);
+    emitShort(name);
+  }
+}
+
 static void string(bool canAssign) {
   emitConstant(OBJ_VAL(
       copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
+static void variable(bool canAssign) { namedVar(parser.previous, canAssign); }
 
-static void namedVar(Token name, bool canAssign) {
-  uint8_t getOp, setOp;
-
-  int arg = resolveLocal(current, &name);
-  if (arg != -1) {
-    getOp = OP_GET_LOCAL;
-    setOp = OP_SET_LOCAL;
-  } else if ((arg = resolveUpvalue(current, &name)) != -1) {
-    getOp = OP_GET_UPVALUE;
-    setOp = OP_SET_UPVALUE;
-  } else {  // global var
-    arg = identifierConstant(&name);
-    getOp = OP_GET_GLOBAL;
-    setOp = OP_SET_GLOBAL;
+static void this_(bool canAssign) {
+  if (currentClass == NULL) {
+    error("Can't use 'this' outside of a class");
+    return;
   }
 
-  uint16_t argUint = (uint16_t)arg;
-  if (canAssign && match(TOKEN_EQUAL))  // x = ...
-  {
-    expression();
-    emitByte(setOp);
-    emitBytes((argUint >> 8) & 0xff, argUint & 0xff);
-  } else {
-    emitByte(getOp);
-    emitBytes((argUint >> 8) & 0xff, argUint & 0xff);
-  }
+  variable(false);
 }
 
-static void variable(bool canAssign) { namedVar(parser.previous, canAssign); }
+static void super_(bool canAssign) {
+  if (currentClass == NULL) {
+    error("Can't use 'super' outside of a class");
+  } else if (!currentClass->hasSuperClass) {
+    error("Can't use 'super' in a class with no superclass");
+  }
+
+  consume(TOKEN_DOT, "Expect '.' after 'super'");
+  consume(TOKEN_IDENTIFIER, "Expect superclass method name");
+  uint16_t name = identifierConstant(&parser.previous);
+
+  namedVar(syntheticToken("this"), false);
+  if (match(TOKEN_LEFT_PAREN)) {
+    uint8_t argCount = argumentList();
+    namedVar(syntheticToken("super"), false);
+    emitByte(OP_SUPER_INVOKE);
+    emitShort(name);
+  } else {
+    namedVar(syntheticToken("super"), false);
+    emitByte(OP_GET_SUPER);
+    emitShort(name);
+  }
+}
 
 ParseRule rules[] = {
     [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
@@ -723,7 +887,7 @@ ParseRule rules[] = {
     [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
-    [TOKEN_DOT] = {NULL, NULL, PREC_NONE},
+    [TOKEN_DOT] = {NULL, dot, PREC_CALL},
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
@@ -749,8 +913,8 @@ ParseRule rules[] = {
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
     [TOKEN_OR] = {NULL, or_, PREC_OR},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_THIS] = {NULL, NULL, PREC_NONE},
+    [TOKEN_SUPER] = {super_, NULL, PREC_NONE},
+    [TOKEN_THIS] = {this_, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},

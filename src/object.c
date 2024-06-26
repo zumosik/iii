@@ -77,15 +77,6 @@ ObjString *copyString(const char *chars, int length) {
   return allocateString(heapChars, length, hash);
 }
 
-ObjFunc *newFunction() {
-  ObjFunc *func = ALLOCATE_OBJ(ObjFunc, OBJ_FUNCTION);
-  func->arity = 0;
-  func->name = NULL;
-  func->upvalueCount = 0;
-  initChunk(&func->chunk);
-  return func;
-}
-
 static void printFunc(ObjFunc *func) {
   if (func->name == NULL) {
     printf("<script>");
@@ -111,9 +102,27 @@ void printObject(Value value) {
     case OBJ_UPVALUE:
       printf("upvalue");
       break;
+    case OBJ_CLASS:
+      printf("<class %s>", AS_CLASS(value)->name->chars);
+      break;
+    case OBJ_INSTANCE:
+      printf("<%s instance>", AS_INSTANCE(value)->cclass->name->chars);
+      break;
+    case OBJ_BOUND_METHOD:
+      printFunc(AS_BOUND_METHOD(value)->method->function);
+      break;
     default:
       printf("Unknown object type\n");
   }
+}
+
+ObjFunc *newFunction() {
+  ObjFunc *func = ALLOCATE_OBJ(ObjFunc, OBJ_FUNCTION);
+  func->arity = 0;
+  func->name = NULL;
+  func->upvalueCount = 0;
+  initChunk(&func->chunk);
+  return func;
 }
 
 ObjNative *newNative(NativeFn function) {
@@ -142,4 +151,26 @@ ObjUpvalue *newUpvalue(Value *slot) {
   upvalue->next = NULL;
   upvalue->closed = NIL_VAL;
   return upvalue;
+}
+
+ObjClass *newClass(ObjString *name) {
+  ObjClass *cclass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+  cclass->name = name;
+  initTable(&cclass->methods);
+  return cclass;
+}
+
+ObjInstance *newInstance(ObjClass *cclass) {
+  ObjInstance *instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
+  instance->cclass = cclass;
+  initTable(&instance->fields);
+  return instance;
+}
+
+ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
+  ObjBoundMethod *bound = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
+
+  bound->receiver = receiver;
+  bound->method = method;
+  return bound;
 }

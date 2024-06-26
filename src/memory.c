@@ -1,17 +1,17 @@
 // #include <cstddef>
 #include "memory.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "compiler.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
 #ifdef DEBUG_LOG_GC
 #include <stdio.h>
-
-#include "debug.h"
 #endif /* ifdef DEBUG_LOG_GC */
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
@@ -54,7 +54,7 @@ void markObject(Obj *obj) {
     vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
     vm.grayStack = realloc(vm.grayStack, vm.grayCapacity * sizeof(Obj *));
     if (vm.grayStack == NULL) {  // some problems with allocating = aborting
-      perror("Gray stack problem (FATAL)");
+      perror("Gray stack problem (FATAL)\n");
       exit(1);
     }
   }
@@ -103,6 +103,20 @@ static void freeObj(Obj *obj) {
     case OBJ_UPVALUE:
       FREE(ObjUpvalue, obj);
       break;
+    case OBJ_CLASS:
+      ObjClass *cclass = (ObjClass *)obj;
+      freeTable(&cclass->methods);
+      FREE(ObjClass, obj);
+      break;
+    case OBJ_INSTANCE: {
+      ObjInstance *instance = (ObjInstance *)obj;
+      freeTable(&instance->fields);
+      FREE(ObjInstance, obj);
+      break;
+    }
+    case OBJ_BOUND_METHOD:
+      FREE(ObjBoundMethod, obj);
+      break;
     default:
       break;
   }
@@ -143,6 +157,9 @@ static void markRoots() {
 
   // mark compiler roots
   markCompilerRoots();
+
+  // small, but useful object
+  markObject((Obj *)vm.initString);
 }
 
 void blackenObject(Obj *obj) {
@@ -172,6 +189,23 @@ void blackenObject(Obj *obj) {
       }
       break;
     }
+    case OBJ_CLASS: {
+      ObjClass *cclass = (ObjClass *)obj;
+      markObject((Obj *)cclass->name);
+      markTable(&cclass->methods);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      ObjInstance *instance = (ObjInstance *)obj;
+      markObject((Obj *)instance->cclass);
+      markTable(&instance->fields);
+      break;
+    }
+    case OBJ_BOUND_METHOD:
+      ObjBoundMethod *bound = (ObjBoundMethod *)obj;
+      markValue(bound->receiver);
+      markObject((Obj *)bound->method);
+      break;
   }
 }
 

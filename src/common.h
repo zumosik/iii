@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define INIT_STRING "init"  // string for init method of class
+#define INIT_STRING_LEN 4   // len of init string
+
 #define GC_HEAP_GROW_FACTOR 2    // grow factor for GC
 #define GC_BEFORE_FIRST 1048576  // 1024 * 1024 before first GC call
 

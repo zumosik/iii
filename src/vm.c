@@ -1,6 +1,7 @@
 #include "vm.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "chunk.h"
@@ -10,6 +11,7 @@
 #include "memory.h"
 #include "object.h"
 #include "string.h"
+#include "table.h"
 #include "time.h"
 #include "value.h"
 
@@ -85,6 +87,9 @@ void initVM() {
   initTable(&vm.strings);
   initTable(&vm.globals);
 
+  vm.initString = NULL;  // just to be safe from GC
+  vm.initString = copyString(INIT_STRING, INIT_STRING_LEN);
+
   vm.grayCount = 0;
   vm.grayCapacity = 0;
   vm.grayStack = NULL;
@@ -101,6 +106,7 @@ void freeVM() {
   freeObjects();  // free all objects
   freeTable(&vm.strings);
   freeTable(&vm.globals);
+  vm.initString = NULL;
 }
 
 static bool call(ObjClosure *closure, int argCount) {
@@ -134,6 +140,24 @@ static bool callValue(Value callee, int argCount) {
         push(result);
         return true;
       }
+      case OBJ_CLASS: {  // creating a class
+        ObjClass *cclass = AS_CLASS(callee);
+        vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(cclass));
+
+        Value initializer;
+        if (tableGet(&cclass->methods, vm.initString, &initializer)) {
+          return call(AS_CLOSURE(initializer), argCount);
+        } else if (argCount != 0) {
+          runtimeError("Expected 0 arguments but got %d", argCount);
+        }
+
+        return true;
+      }
+      case OBJ_BOUND_METHOD: {
+        ObjBoundMethod *bound = AS_BOUND_METHOD(callee);
+        vm.stackTop[-argCount - 1] = bound->receiver;
+        return call(bound->method, argCount);
+      }
       default:
         break;
     }
@@ -141,6 +165,49 @@ static bool callValue(Value callee, int argCount) {
 
   runtimeError("Can only call functions and classes");
   return false;
+}
+
+static bool invokeFromClass(ObjClass *cclass, ObjString *name, int argCount) {
+  Value method;
+  if (!tableGet(&cclass->methods, name, &method)) {
+    runtimeError("Undefined property '%s'", name->chars);
+    return false;
+  }
+
+  return call(AS_CLOSURE(method), argCount);
+}
+
+static bool invoke(ObjString *name, int argCount) {
+  Value receiver = peek(argCount);
+
+  if (!IS_INSTANCE(receiver)) {
+    runtimeError("Only instances have methods");
+    return false;
+  }
+
+  ObjInstance *instance = AS_INSTANCE(receiver);
+
+  Value val;
+  if (tableGet(&instance->fields, name, &val)) {
+    vm.stackTop[-argCount - 1] = val;
+    return callValue(val, argCount);
+  }
+
+  return invokeFromClass(instance->cclass, name, argCount);
+}
+
+static bool bindMethod(ObjClass *cclass, ObjString *name) {
+  Value method;
+  if (!tableGet(&cclass->methods, name, &method)) {
+    runtimeError("Undefined property '%s'", name->chars);
+    return false;
+  }
+
+  ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+
+  pop();
+  push(OBJ_VAL(bound));
+  return true;
 }
 
 static ObjUpvalue *captureUpvalue(Value *local) {
@@ -175,6 +242,13 @@ static void closeUpvalues(Value *last) {
     upvalue->location = &upvalue->closed;
     vm.openUpvalues = upvalue->next;
   }
+}
+
+static void defineMethod(ObjString *name) {
+  Value method = peek(0);
+  ObjClass *cclass = AS_CLASS(peek(1));
+  tableSet(&cclass->methods, name, method);
+  pop();
 }
 
 static bool isFalsey(Value value) {
@@ -403,6 +477,88 @@ static InterpretResult run() {
       case OP_CLOSE_UPVALUE: {
         closeUpvalues(vm.stackTop - 1);
         pop();
+        break;
+      }
+      case OP_CLASS:
+        push(OBJ_VAL(newClass(READ_STRING_LONG())));
+        break;
+      case OP_GET_PROPERTY: {
+        if (!IS_INSTANCE(peek(0))) {
+          runtimeError("Only instances can have properties");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        ObjInstance *instance = AS_INSTANCE(peek(0));
+        ObjString *name = READ_STRING_LONG();
+        Value val;
+
+        if (tableGet(&instance->fields, name, &val)) {
+          pop();  // pop instance
+          push(val);
+          break;
+        }
+
+        if (!bindMethod(instance->cclass, name)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        break;
+      }
+      case OP_SET_PROPERTY: {
+        if (!IS_INSTANCE(peek(1))) {
+          runtimeError("Only instances can have fields");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        ObjInstance *instance = AS_INSTANCE(peek(1));
+        tableSet(&instance->fields, READ_STRING_LONG(), peek(0));
+
+        Value val = pop();
+        pop();
+        push(val);
+        break;
+      }
+      case OP_METHOD:
+        defineMethod(READ_STRING_LONG());
+        break;
+      case OP_INVOKE: {
+        ObjString *method = READ_STRING_LONG();
+        int argCount = READ_BYTE();
+        if (!invoke(method, argCount)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        frame = &vm.frames[vm.frameCount - 1];
+        break;
+      }
+      case OP_INHERIT: {
+        Value superclass = peek(1);
+        if (!IS_CLASS(superclass)) {
+          runtimeError("Superclass must be a class");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        ObjClass *subclass = AS_CLASS(peek(0));
+        tableAddAll(&AS_CLASS(superclass)->methods, &subclass->methods);
+        pop();  // subclass
+        break;
+      }
+      case OP_GET_SUPER: {
+        ObjString *name = READ_STRING_LONG();
+        ObjClass *superclass = AS_CLASS(pop());
+        if (!bindMethod(superclass, name)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        break;
+      }
+      case OP_SUPER_INVOKE: {
+        ObjString *method = READ_STRING_LONG();
+        int argCount = READ_BYTE();
+        ObjClass *superclass = AS_CLASS(pop());
+        if (!invokeFromClass(superclass, method, argCount)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        frame = &vm.frames[vm.frameCount - 1];
         break;
       }
     }
