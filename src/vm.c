@@ -167,6 +167,28 @@ static bool callValue(Value callee, int argCount) {
   return false;
 }
 
+static bool invokeFromClass(ObjClass *cclass, ObjString *name, int argCount) {
+  Value method;
+  if (!tableGet(&cclass->methods, name, &method)) {
+    runtimeError("Undefined property '%s'", name->chars);
+    return false;
+  }
+
+  return call(AS_CLOSURE(method), argCount);
+}
+
+static bool invoke(ObjString *name, int argCount) {
+  Value receiver = peek(argCount);
+
+  if (!IS_INSTANCE(receiver)) {
+    runtimeError("Only instances have methods");
+    return false;
+  }
+
+  ObjInstance *instance = AS_INSTANCE(receiver);
+  return invokeFromClass(instance->cclass, name, argCount);
+}
+
 static bool bindMethod(ObjClass *cclass, ObjString *name) {
   Value method;
   if (!tableGet(&cclass->methods, name, &method)) {
@@ -492,6 +514,15 @@ static InterpretResult run() {
       case OP_METHOD:
         defineMethod(READ_STRING_LONG());
         break;
+      case OP_INVOKE: {
+        ObjString *method = READ_STRING_LONG();
+        int argCount = READ_BYTE();
+        if (!invoke(method, argCount)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        frame = &vm.frames[vm.frameCount - 1];
+        break;
+      }
     }
   }
 

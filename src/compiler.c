@@ -355,6 +355,7 @@ static void defineVar(uint16_t global) {
 }
 
 static uint8_t argumentList() {
+  // FIXME: you can have more than 256 vars
   uint8_t argCount = 0;
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
@@ -362,7 +363,6 @@ static uint8_t argumentList() {
 
       if (argCount == 255) {
         error("Can't have more than 255 arguments");
-        // if you need more than 255 arguments, you're doing something wrong :)
       }
 
       argCount++;
@@ -800,6 +800,11 @@ static void dot(bool canAssign) {
     expression();
     emitByte(OP_SET_PROPERTY);
     emitShort(name);
+  } else if (match(TOKEN_LEFT_PAREN)) {  // if you want to call method
+    uint8_t argCount = argumentList();
+    emitByte(OP_INVOKE);
+    emitShort(name);
+    emitByte(argCount);
   } else {
     emitByte(OP_GET_PROPERTY);
     emitShort(name);
