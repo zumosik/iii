@@ -1,6 +1,7 @@
 // #include <cstddef>
 #include "memory.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "compiler.h"
@@ -103,6 +104,8 @@ static void freeObj(Obj *obj) {
       FREE(ObjUpvalue, obj);
       break;
     case OBJ_CLASS:
+      ObjClass *cclass = (ObjClass *)obj;
+      freeTable(&cclass->methods);
       FREE(ObjClass, obj);
       break;
     case OBJ_INSTANCE: {
@@ -181,8 +184,9 @@ void blackenObject(Obj *obj) {
       break;
     }
     case OBJ_CLASS: {
-      ObjClass *class = (ObjClass *)obj;
-      markObject((Obj *)class->name);
+      ObjClass *cclass = (ObjClass *)obj;
+      markObject((Obj *)cclass->name);
+      markTable(&cclass->methods);
       break;
     }
     case OBJ_INSTANCE: {

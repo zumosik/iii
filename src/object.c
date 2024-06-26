@@ -77,15 +77,6 @@ ObjString *copyString(const char *chars, int length) {
   return allocateString(heapChars, length, hash);
 }
 
-ObjFunc *newFunction() {
-  ObjFunc *func = ALLOCATE_OBJ(ObjFunc, OBJ_FUNCTION);
-  func->arity = 0;
-  func->name = NULL;
-  func->upvalueCount = 0;
-  initChunk(&func->chunk);
-  return func;
-}
-
 static void printFunc(ObjFunc *func) {
   if (func->name == NULL) {
     printf("<script>");
@@ -122,6 +113,15 @@ void printObject(Value value) {
   }
 }
 
+ObjFunc *newFunction() {
+  ObjFunc *func = ALLOCATE_OBJ(ObjFunc, OBJ_FUNCTION);
+  func->arity = 0;
+  func->name = NULL;
+  func->upvalueCount = 0;
+  initChunk(&func->chunk);
+  return func;
+}
+
 ObjNative *newNative(NativeFn function) {
   ObjNative *native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
   native->function = function;
@@ -153,6 +153,7 @@ ObjUpvalue *newUpvalue(Value *slot) {
 ObjClass *newClass(ObjString *name) {
   ObjClass *cclass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
   cclass->name = name;
+  initTable(&cclass->methods);
   return cclass;
 }
 
