@@ -869,10 +869,16 @@ static void super_(bool canAssign) {
   uint16_t name = identifierConstant(&parser.previous);
 
   namedVar(syntheticToken("this"), false);
-  namedVar(syntheticToken("super"), false);
-
-  emitByte(OP_GET_SUPER);
-  emitShort(name);
+  if (match(TOKEN_LEFT_PAREN)) {
+    uint8_t argCount = argumentList();
+    namedVar(syntheticToken("super"), false);
+    emitByte(OP_SUPER_INVOKE);
+    emitShort(name);
+  } else {
+    namedVar(syntheticToken("super"), false);
+    emitByte(OP_GET_SUPER);
+    emitShort(name);
+  }
 }
 
 ParseRule rules[] = {
