@@ -4,11 +4,14 @@
 #include "common.h"
 #include "value.h"
 
+// Note:
+// -----------------------------------------------------------------------------
 // OP_CONSTANT, OP_DEFINE_GLOBAL, OP_GET_GLOBAL, OP_SET_GLOBAL,
 // OP_SET_LOCAL, OP_GET_LOCAL, OP_CLOSURE, OP_GET_UPVALUE, OP_SET_UPVALUE,
-// OP_CLASS, OP_GET_PROPERTY, OP_SET_PROPERTY
+// OP_CLASS, OP_GET_PROPERTY, OP_SET_PROPERTY, OP_METHOD
 // all uses 2 bytes for the constant index it wastes some memory but
 // it's not a big deal (can be optimized later if needed)
+// -----------------------------------------------------------------------------
 
 typedef enum {
   OP_CONSTANT,  // push a constant to the stack
@@ -52,8 +55,8 @@ typedef enum {
   OP_CALL,     // call a function
   OP_CLOSURE,  // create a closure
 
-  OP_CLASS,  // create a class
-
+  OP_CLASS,   // create a class
+  OP_METHOD,  // define method of a class
 } OpCode;
 
 typedef struct {

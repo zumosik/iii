@@ -354,6 +354,37 @@ static uint16_t parseVar(const char *errorMessage) {
   return identifierConstant(&parser.previous);
 }
 
+static void namedVar(Token name, bool canAssign) {
+  uint8_t getOp, setOp;
+
+  uint16_t argUint = 0;
+
+  int arg = resolveLocal(current, &name);
+  if (arg != -1) {
+    getOp = OP_GET_LOCAL;
+    setOp = OP_SET_LOCAL;
+    argUint = (uint16_t)arg;
+  } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+    getOp = OP_GET_UPVALUE;
+    setOp = OP_SET_UPVALUE;
+    argUint = (uint16_t)arg;
+  } else {  // global var
+    argUint = identifierConstant(&name);
+    getOp = OP_GET_GLOBAL;
+    setOp = OP_SET_GLOBAL;
+  }
+
+  if (canAssign && match(TOKEN_EQUAL))  // x = ...
+  {
+    expression();
+    emitByte(setOp);
+    emitShort(argUint);
+  } else {
+    emitByte(getOp);
+    emitShort(argUint);
+  }
+}
+
 static void function(FunctionType type) {
   Compiler compiler;
   initCompiler(&compiler, type);
@@ -391,17 +422,36 @@ static void function(FunctionType type) {
   freeUpvaluesArray(&compiler.upvalues);
 }
 
+static void method() {
+  consume(TOKEN_IDENTIFIER, "Expect method name");
+  uint16_t constant = identifierConstant(&parser.previous);
+
+  FunctionType type = TYPE_FUNCTION;
+  function(type);
+
+  emitByte(OP_METHOD);
+  emitShort(constant);
+}
+
 static void classDeclaration() {
   consume(TOKEN_IDENTIFIER, "Expect class name");
+
+  Token className = parser.previous;
+
   uint16_t nameConstant = identifierConstant(&parser.previous);
 
   emitByte(OP_CLASS);
   emitShort(nameConstant);
   defineVar(nameConstant);
 
+  namedVar(className, false);  // push class name
+
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body");
-  // ...
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    method();
+  }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body");
+  emitByte(OP_POP);  // pop class name
 }
 
 static void fnDeclaration() {
@@ -718,38 +768,6 @@ static void string(bool canAssign) {
   emitConstant(OBJ_VAL(
       copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
-
-static void namedVar(Token name, bool canAssign) {
-  uint8_t getOp, setOp;
-
-  uint16_t argUint = 0;
-
-  int arg = resolveLocal(current, &name);
-  if (arg != -1) {
-    getOp = OP_GET_LOCAL;
-    setOp = OP_SET_LOCAL;
-    argUint = (uint16_t)arg;
-  } else if ((arg = resolveUpvalue(current, &name)) != -1) {
-    getOp = OP_GET_UPVALUE;
-    setOp = OP_SET_UPVALUE;
-    argUint = (uint16_t)arg;
-  } else {  // global var
-    argUint = identifierConstant(&name);
-    getOp = OP_GET_GLOBAL;
-    setOp = OP_SET_GLOBAL;
-  }
-
-  if (canAssign && match(TOKEN_EQUAL))  // x = ...
-  {
-    expression();
-    emitByte(setOp);
-    emitShort(argUint);
-  } else {
-    emitByte(getOp);
-    emitShort(argUint);
-  }
-}
-
 static void variable(bool canAssign) { namedVar(parser.previous, canAssign); }
 
 ParseRule rules[] = {
