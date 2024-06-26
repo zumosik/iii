@@ -8,7 +8,7 @@
 // -----------------------------------------------------------------------------
 // OP_CONSTANT, OP_DEFINE_GLOBAL, OP_GET_GLOBAL, OP_SET_GLOBAL,
 // OP_SET_LOCAL, OP_GET_LOCAL, OP_CLOSURE, OP_GET_UPVALUE, OP_SET_UPVALUE,
-// OP_CLASS, OP_GET_PROPERTY, OP_SET_PROPERTY, OP_METHOD
+// OP_CLASS, OP_GET_PROPERTY, OP_SET_PROPERTY, OP_METHOD, OP_GET_SUPER
 // all uses 2 bytes for the constant index it wastes some memory but
 // it's not a big deal (can be optimized later if needed)
 // -----------------------------------------------------------------------------
@@ -29,6 +29,8 @@ typedef enum {
 
   OP_GET_PROPERTY,  // get value of property
   OP_SET_PROPERTY,  // set value of property
+
+  OP_GET_SUPER,  // get super of a class
 
   OP_NIL,    // nil
   OP_TRUE,   // true

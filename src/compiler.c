@@ -1,5 +1,6 @@
 #include "compiler.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +46,7 @@ typedef struct Compiler {
 typedef struct ClassCompiler {
   struct ClassCompiler *enclosing;
   Token name;
+  bool hasSuperClass;
 } ClassCompiler;
 
 Compiler *current = NULL;
@@ -412,6 +414,13 @@ static void namedVar(Token name, bool canAssign) {
   }
 }
 
+static Token syntheticToken(const char *text) {
+  Token token;
+  token.start = text;
+  token.length = (int)strlen(text);
+  return token;
+}
+
 static void function(FunctionType type) {
   Compiler compiler;
   initCompiler(&compiler, type);
@@ -478,6 +487,7 @@ static void classDeclaration() {
   ClassCompiler classCompiler;
   classCompiler.name = parser.previous;
   classCompiler.enclosing = currentClass;
+  classCompiler.hasSuperClass = false;
   currentClass = &classCompiler;
 
   if (match(TOKEN_MINUS)) {
@@ -488,8 +498,13 @@ static void classDeclaration() {
       error("Class can't inherit from itself");
     }
 
+    beginScope();
+    addLocal(syntheticToken("super"));
+    defineVar(0);
+
     namedVar(className, false);
     emitByte(OP_INHERIT);
+    classCompiler.hasSuperClass = true;
   }
 
   namedVar(className, false);  // push class name
@@ -500,6 +515,10 @@ static void classDeclaration() {
   }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body");
   emitByte(OP_POP);  // pop class name
+
+  if (classCompiler.hasSuperClass) {
+    endScope();
+  }
 
   currentClass = currentClass->enclosing;
 }
@@ -838,6 +857,24 @@ static void this_(bool canAssign) {
   variable(false);
 }
 
+static void super_(bool canAssign) {
+  if (currentClass == NULL) {
+    error("Can't use 'super' outside of a class");
+  } else if (!currentClass->hasSuperClass) {
+    error("Can't use 'super' in a class with no superclass");
+  }
+
+  consume(TOKEN_DOT, "Expect '.' after 'super'");
+  consume(TOKEN_IDENTIFIER, "Expect superclass method name");
+  uint16_t name = identifierConstant(&parser.previous);
+
+  namedVar(syntheticToken("this"), false);
+  namedVar(syntheticToken("super"), false);
+
+  emitByte(OP_GET_SUPER);
+  emitShort(name);
+}
+
 ParseRule rules[] = {
     [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
@@ -870,7 +907,7 @@ ParseRule rules[] = {
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
     [TOKEN_OR] = {NULL, or_, PREC_OR},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
+    [TOKEN_SUPER] = {super_, NULL, PREC_NONE},
     [TOKEN_THIS] = {this_, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
