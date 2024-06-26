@@ -6,7 +6,8 @@
 
 // OP_CONSTANT, OP_DEFINE_GLOBAL, OP_GET_GLOBAL, OP_SET_GLOBAL,
 // OP_SET_LOCAL, OP_GET_LOCAL, OP_CLOSURE, OP_GET_UPVALUE, OP_SET_UPVALUE,
-// OP_CLASS all uses 2 bytes for the constant index it wastes some memory but
+// OP_CLASS, OP_GET_PROPERTY, OP_SET_PROPERTY
+// all uses 2 bytes for the constant index it wastes some memory but
 // it's not a big deal (can be optimized later if needed)
 
 typedef enum {
@@ -19,10 +20,12 @@ typedef enum {
   OP_SET_LOCAL,  // set local variable
   OP_GET_LOCAL,  // get local variable
 
-  OP_GET_UPVALUE,  // get upvalue
-  OP_SET_UPVALUE,  // set upvalue
-
+  OP_GET_UPVALUE,    // get upvalue
+  OP_SET_UPVALUE,    // set upvalue
   OP_CLOSE_UPVALUE,  // close upvalue (isn't on stack anymore)
+
+  OP_GET_PROPERTY,  // get value of property
+  OP_SET_PROPERTY,  // set value of property
 
   OP_NIL,    // nil
   OP_TRUE,   // true
@@ -40,19 +43,16 @@ typedef enum {
   OP_DIVIDE,    // divide
 
   OP_RETURN,  // return the top of the stack
-
-  OP_POP,  // pop the top of the stack
+  OP_POP,     // pop the top of the stack
 
   OP_JUMP_FALSE,  // jump to a specific offset when false
   OP_JUMP,        // jump to a specific offset
+  OP_LOOP,        // works like jump but with negative offset
 
-  OP_CALL,  // call a function
-
+  OP_CALL,     // call a function
   OP_CLOSURE,  // create a closure
 
   OP_CLASS,  // create a class
-
-  OP_LOOP,  // works like jump but with negative offset
 
 } OpCode;
 

@@ -120,6 +120,10 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
   emitByte(byte2);
 }
 
+static void emitShort(uint16_t val) {
+  emitBytes((val >> 8) & 0xff, val & 0xff);
+}
+
 static void emitReturn() { emitBytes(OP_NIL, OP_RETURN); }
 
 static int emitJump(uint8_t instruction) {
@@ -133,8 +137,7 @@ static void emitLoop(int loopStart) {
   emitByte(OP_LOOP);
   int offset = currentChunk()->count - loopStart + 2;
   if (offset > UINT16_MAX) error("Loop body is too large");
-  emitByte((offset >> 8) & 0xff);
-  emitByte(offset & 0xff);
+  emitShort((uint16_t)offset);
 }
 
 // ! endCompiler would not free upvalues array
@@ -213,7 +216,7 @@ static uint16_t makeConstant(Value val) {
   return (uint16_t)addConst(currentChunk(), val);
 }
 
-static int identifierConstant(Token *name) {
+static uint16_t identifierConstant(Token *name) {
   return (int)makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
@@ -321,7 +324,7 @@ static void defineVar(uint16_t global) {
   }
 
   emitByte(OP_DEFINE_GLOBAL);
-  emitBytes((global >> 8) & 0xff, global & 0xff);
+  emitShort(global);
 }
 
 static uint8_t argumentList() {
@@ -377,13 +380,12 @@ static void function(FunctionType type) {
   uint16_t constant = makeConstant(OBJ_VAL(func));
 
   emitByte(OP_CLOSURE);
-  emitBytes((constant >> 8) & 0xff, constant & 0xff);
+  emitShort(constant);
 
   uint16_t count = func->upvalueCount;
   for (int i = 0; i < count; i++) {
     emitByte(compiler.upvalues.values[i].isLocal ? 1 : 0);
-    emitBytes((compiler.upvalues.values[i].index >> 8) & 0xff,
-              compiler.upvalues.values[i].index & 0xff);
+    emitShort(compiler.upvalues.values[i].index);
   }
 
   freeUpvaluesArray(&compiler.upvalues);
@@ -394,7 +396,7 @@ static void classDeclaration() {
   uint16_t nameConstant = identifierConstant(&parser.previous);
 
   emitByte(OP_CLASS);
-  emitBytes((nameConstant >> 8) & 0xff, nameConstant >> 8);
+  emitShort(nameConstant);
   defineVar(nameConstant);
 
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body");
@@ -698,6 +700,20 @@ static void literal(bool canAssign) {
   }
 }
 
+static void dot(bool canAssign) {
+  consume(TOKEN_IDENTIFIER, "Expect propery name after '.'");
+  uint16_t name = identifierConstant(&parser.previous);
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    expression();
+    emitByte(OP_SET_PROPERTY);
+    emitShort(name);
+  } else {
+    emitByte(OP_GET_PROPERTY);
+    emitShort(name);
+  }
+}
+
 static void string(bool canAssign) {
   emitConstant(OBJ_VAL(
       copyString(parser.previous.start + 1, parser.previous.length - 2)));
@@ -706,28 +722,31 @@ static void string(bool canAssign) {
 static void namedVar(Token name, bool canAssign) {
   uint8_t getOp, setOp;
 
+  uint16_t argUint = 0;
+
   int arg = resolveLocal(current, &name);
   if (arg != -1) {
     getOp = OP_GET_LOCAL;
     setOp = OP_SET_LOCAL;
+    argUint = (uint16_t)arg;
   } else if ((arg = resolveUpvalue(current, &name)) != -1) {
     getOp = OP_GET_UPVALUE;
     setOp = OP_SET_UPVALUE;
+    argUint = (uint16_t)arg;
   } else {  // global var
-    arg = identifierConstant(&name);
+    argUint = identifierConstant(&name);
     getOp = OP_GET_GLOBAL;
     setOp = OP_SET_GLOBAL;
   }
 
-  uint16_t argUint = (uint16_t)arg;
   if (canAssign && match(TOKEN_EQUAL))  // x = ...
   {
     expression();
     emitByte(setOp);
-    emitBytes((argUint >> 8) & 0xff, argUint & 0xff);
+    emitShort(argUint);
   } else {
     emitByte(getOp);
-    emitBytes((argUint >> 8) & 0xff, argUint & 0xff);
+    emitShort(argUint);
   }
 }
 
@@ -739,7 +758,7 @@ ParseRule rules[] = {
     [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
-    [TOKEN_DOT] = {NULL, NULL, PREC_NONE},
+    [TOKEN_DOT] = {NULL, dot, PREC_NONE},
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
