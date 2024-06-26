@@ -114,6 +114,9 @@ static void freeObj(Obj *obj) {
       FREE(ObjInstance, obj);
       break;
     }
+    case OBJ_BOUND_METHOD:
+      FREE(ObjBoundMethod, obj);
+      break;
     default:
       break;
   }
@@ -195,6 +198,11 @@ void blackenObject(Obj *obj) {
       markTable(&instance->fields);
       break;
     }
+    case OBJ_BOUND_METHOD:
+      ObjBoundMethod *bound = (ObjBoundMethod *)obj;
+      markValue(bound->receiver);
+      markObject((Obj *)bound->method);
+      break;
   }
 }
 

@@ -108,6 +108,9 @@ void printObject(Value value) {
     case OBJ_INSTANCE:
       printf("<%s instance>", AS_INSTANCE(value)->cclass->name->chars);
       break;
+    case OBJ_BOUND_METHOD:
+      printFunc(AS_BOUND_METHOD(value)->method->function);
+      break;
     default:
       printf("Unknown object type\n");
   }
@@ -162,4 +165,12 @@ ObjInstance *newInstance(ObjClass *cclass) {
   instance->cclass = cclass;
   initTable(&instance->fields);
   return instance;
+}
+
+ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
+  ObjBoundMethod *bound = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
+
+  bound->receiver = receiver;
+  bound->method = method;
+  return bound;
 }
