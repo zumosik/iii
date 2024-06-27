@@ -181,13 +181,13 @@ y.printName(); // call method defined in parent class
 ```
 ```
 class Student - Person {
-	init(class, name, lastname) {
-		this.class = class;
+	init(grade, name, lastname) {
+		this.grade = grade;
 		super.init(name, lastname); // we can call methods of parent using 'super' keyword
 	}
 
 	printGrade() {
-		print("Class of ", this.fullname, " is ", this.class); // we can access properties of parent 
+		print("Class of ", this.fullname, " is ", this.grade); // we can access properties of parent 
 		// we could do same using 'super.fullname'
 	}
 }
