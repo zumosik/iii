@@ -1,0 +1,19 @@
+// This program demonstrates how variables work
+
+var x = 5;              // create float value 
+var str = "Some text";  // create string value 
+var isTrue = true;      // bool value  
+var isFalse = false;    // also bool value 
+
+print("X: ", x);              // 5
+print("Str: ", str);          // Some text 
+print("IsTrue: ", isTrue);    // true 
+print("IsFalse: ", isFalse);  // false 
+
+var x = 7; // can assign with 'var' keyword (only for globals)
+
+print("X after first change: ", x); // 7
+
+x = 8;     // or without
+
+print("X after second change: ", x); // 8
