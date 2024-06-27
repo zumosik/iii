@@ -1,0 +1,35 @@
+// This program demonstrates OOP example (also used in readme)
+
+class Person {
+  init(firstname, lastname) { // initializer    
+    // setting properites
+    this.firstname = firstname;
+    this.lastname = lastname;
+    this.fullname = this.firstname + " " + this.lastname;
+  }
+
+  printName() { // creating custom method
+    print(this.fullname);
+  }
+}
+
+var james = Person("James", "Raven"); // creating instance
+print("Lastname of James is ", james.lastname); // getting value of a property 
+
+print("Next line will be fullname of James");
+james.printName();
+
+class Student - Person {
+  init(grade, name, lastname) {
+    this.grade = grade; // set property
+    super.init(name, lastname); // call init method of parent class (Person) 
+  }
+
+  printGrade() {
+    print("Grade of ", this.fullname, " is ", this.grade); // get property of parent (can use 'super' keyword)
+  }
+}
+
+var michael = Student(9, "Michael", "Raven");
+michael.printName();  // call Person  class method 
+michael.printGrade(); // call Student class method 
