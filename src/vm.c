@@ -297,10 +297,9 @@ static InterpretResult run() {
     push(valType(a op b));                            \
   } while (false)
 
-  printf("\nrunning... \n");
-
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION  // enable debug trace if macro is defined
+    printf("\nrunning... \n");
     printf("          ");
     for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
       printf("[ ");
