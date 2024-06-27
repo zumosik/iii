@@ -2,7 +2,6 @@
 # NAME         Name of the output executable (and object file directory).
 # SOURCE_DIR   Directory where source files and headers are found.
 
-MODE=debug
 NAME=iii
 SOURCE_DIR=src
 
@@ -13,7 +12,7 @@ else
 	CFLAGS := -std=c99
 endif
 
-CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sequence-point
+CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sequence-point -Wno-maybe-uninitialized -Wno-stringop-overflow
 
 ifeq ($(SNIPPET),true)
 	CFLAGS += -Wno-unused-function
