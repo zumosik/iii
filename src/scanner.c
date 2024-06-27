@@ -74,19 +74,15 @@ static void skipWhitespace() {
         scanner.line++;
         advance();
         break;
+      case '/':
+        if (peekNext() == '/') {
+          while (peek() != '\n' && !isAtEnd()) advance();
+        } else {
+          return;
+        }
+        break;
       default:
         return;
-    }
-  }
-}
-
-static void skipComments() {
-  // Single line comments
-  if (peek() == '/') {
-    if (peekNext() == '/') {
-      while (peek() != '\n' && !isAtEnd()) {
-        advance();
-      }
     }
   }
 }
@@ -190,7 +186,6 @@ static Token identifier() {
 
 Token scanToken() {
   skipWhitespace();
-  skipComments();
 
   scanner.start = scanner.current;
 
@@ -236,14 +231,14 @@ Token scanToken() {
     case '&':
       if (match('&')) return makeToken(TOKEN_AND);
 
-      return errorToken("Expected &.");
+      return errorToken("Expected &");
     case '|':
       if (match('|')) return makeToken(TOKEN_OR);
 
-      return errorToken("Expected |.");
+      return errorToken("Expected |");
     case '"':
       return stringToken();
   }
 
-  return errorToken("Unexpected character.");
+  return errorToken("Unexpected character");
 }

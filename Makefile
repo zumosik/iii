@@ -1,42 +1,50 @@
-# Compiler
-CC = gcc
+# MODE         "debug" or "release".
+# NAME         Name of the output executable (and object file directory).
+# SOURCE_DIR   Directory where source files and headers are found.
 
-# Compiler flags
-CFLAGS = -Wall -Wextra -Werror -Wno-unused-parameter
+MODE=debug
+NAME=iii
+SOURCE_DIR=src
 
-# Target executable
-TARGET = iii
+ifeq ($(CPP),true)
+	CFLAGS := -std=c++11
+	C_LANG := -x c++
+else
+	CFLAGS := -std=c99
+endif
 
-# Source and build directories
-SRC_DIR = src
-BUILD_DIR = build
+CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sequence-point
 
-# Find all .c files in the src directory
-SRCS = $(wildcard $(SRC_DIR)/*.c)
+ifeq ($(SNIPPET),true)
+	CFLAGS += -Wno-unused-function
+endif
 
-# Create a list of .o files in the build directory
-OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))
+ifeq ($(MODE),debug)
+	CFLAGS += -O0 -DDEBUG -g
+	BUILD_DIR := build/debug
+else
+	CFLAGS += -O3 -flto
+	BUILD_DIR := build/release
+endif
 
-# Default target
-all: $(TARGET)
+HEADERS := $(wildcard $(SOURCE_DIR)/*.h)
+SOURCES := $(wildcard $(SOURCE_DIR)/*.c)
+OBJECTS := $(addprefix $(BUILD_DIR)/$(NAME)/, $(notdir $(SOURCES:.c=.o)))
 
-# Rule to link object files to create the executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+# Targets ---------------------------------------------------------------------
 
-# Rule to compile .c files to .o files
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+# Link the interpreter.
+build/$(NAME): $(OBJECTS)
+	@ printf "%8s %-40s %s\n" $(CC) $@ "$(CFLAGS)"
+	@ mkdir -p build
+	@ $(CC) $(CFLAGS) $^ -o $@
 
-# Create the build directory if it does not exist
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+# Compile object files.
+$(BUILD_DIR)/$(NAME)/%.o: $(SOURCE_DIR)/%.c $(HEADERS)
+	@ printf "%8s %-40s %s\n" $(CC) $< "$(CFLAGS)"
+	@ mkdir -p $(BUILD_DIR)/$(NAME)
+	@ $(CC) -c $(C_LANG) $(CFLAGS) -o $@ $<
 
-# Clean target to remove compiled files
-clean:
-	rm -f $(BUILD_DIR)/*.o $(TARGET)
-	rm -rf $(BUILD_DIR)
+.PHONY: default
 
-# Phony targets
-.PHONY: all clean
 

@@ -571,7 +571,7 @@ static void synchronize() {
   }
 }
 
-static void declaration() {
+void declaration() {
   if (match(TOKEN_VAR)) {
     varDeclaration();
   } else if (match(TOKEN_FN)) {
@@ -713,7 +713,7 @@ static void returnStatement() {
   }
 }
 
-static void statement() {
+void statement() {
   if (match(TOKEN_IF)) {
     ifStatement();
   } else if (match(TOKEN_WHILE)) {
@@ -874,6 +874,7 @@ static void super_(bool canAssign) {
     namedVar(syntheticToken("super"), false);
     emitByte(OP_SUPER_INVOKE);
     emitShort(name);
+    emitByte(argCount);
   } else {
     namedVar(syntheticToken("super"), false);
     emitByte(OP_GET_SUPER);
@@ -922,7 +923,7 @@ ParseRule rules[] = {
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
 };
 
-static ParseRule *getRule(TokenType type) { return &rules[type]; }
+ParseRule *getRule(TokenType type) { return &rules[type]; }
 
 ObjFunc *compile(const char *source) {
   initScanner(source);

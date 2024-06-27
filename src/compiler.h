@@ -28,9 +28,9 @@ typedef struct {
 } ParseRule;
 
 ObjFunc *compile(const char *source);
-static ParseRule *getRule(TokenType type);
-static void statement();
-static void declaration();
+ParseRule *getRule(TokenType type);
+void statement();
+void declaration();
 
 // mark all compiler roots for GC
 void markCompilerRoots();

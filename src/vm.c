@@ -297,7 +297,7 @@ static InterpretResult run() {
     push(valType(a op b));                            \
   } while (false)
 
-  printf("\n running... \n");
+  printf("\nrunning... \n");
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION  // enable debug trace if macro is defined

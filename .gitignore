@@ -64,3 +64,6 @@ dkms.conf
 
 # Clang format
 .clang-format
+
+# folder with build files 
+build/
