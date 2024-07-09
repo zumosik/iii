@@ -46,6 +46,7 @@ typedef enum {
   OP_SUBTRACT,  // subtract
   OP_MULTIPLY,  // multiply
   OP_DIVIDE,    // divide
+  OP_POWER,     // power
 
   OP_RETURN,  // return the top of the stack
   OP_POP,     // pop the top of the stack
