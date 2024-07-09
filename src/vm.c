@@ -1,5 +1,6 @@
 #include "vm.h"
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -361,6 +362,16 @@ static InterpretResult run() {
       case OP_DIVIDE:
         BINARY_OP(NUM_VAL, /);
         break;
+      case OP_POWER: {
+        if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+          runtimeError("Operands must be numbers");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        double b = AS_NUM(pop());
+        double a = AS_NUM(pop());
+        push(NUM_VAL(pow(a, b)));
+        break;
+      }
       case OP_EQUAL:
         Value a = pop();
         Value b = pop();
