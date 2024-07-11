@@ -90,11 +90,15 @@ static Value importNative(int argCount, Value *args) {
 
       VM copyOfVm = vm;
 
-      initVM();
+      resetStack();
 
       InterpretResult res = interpret(source);
 
       vm = copyOfVm;
+
+#ifdef DEBUG_TRACE_EXECUTION
+      printf("\ncontinuing previous file...\n");
+#endif /* ifdef DEBUG_TRACE_EXECUTION */
 
       if (res != INTERPRET_OK) {
         runtimeError("Can't import");  // FIXME
@@ -441,11 +445,13 @@ static InterpretResult run() {
         ObjString *name = READ_STRING_LONG();
         tableSet(&vm.globals, name, peek(0));
         pop();
+
         break;
       }
       case OP_GET_GLOBAL: {
         ObjString *name = READ_STRING_LONG();
         Value val;
+
         if (!tableGet(&vm.globals, name, &val)) {
           undefinedVarError(name);
           return INTERPRET_RUNTIME_ERROR;

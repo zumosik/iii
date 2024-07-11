@@ -1,9 +1,11 @@
 #include "table.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "memory.h"
+#include "object.h"
 #include "value.h"
 
 #define TABLE_MAX_LOAD 0.75
@@ -80,6 +82,19 @@ void tableAddAll(Table *from, Table *to) {
   }
 }
 
+void tableAddAllUnique(Table *from, Table *to) {
+  for (int i = 0; i <= from->capacity; i++) {
+    Entry *entry = &from->entries[i];
+    if (entry->key != NULL) {
+      Value existingValue;
+      if (!tableGet(to, entry->key, &existingValue) ||
+          !valuesEqual(existingValue, entry->value)) {
+        tableSet(to, entry->key, entry->value);
+      }
+    }
+  }
+}
+
 bool tableDelete(Table *table, ObjString *key) {
   if (table->count == 0) return false;
 
@@ -152,5 +167,17 @@ void tableRemoveWhite(Table *table) {
     if (entry->key != NULL && !entry->key->obj.isMarked) {
       tableDelete(table, entry->key);
     }
+  }
+}
+
+void printTable(Table *table) {
+  for (int i = 0; i <= table->count; i++) {
+    if (table->entries[i].key == NULL) {
+      continue;
+    }
+    printObject(OBJ_VAL(table->entries[i].key));
+    printf(" : ");
+    printValue(table->entries[i].value);
+    printf("\n");
   }
 }
