@@ -4,11 +4,13 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "chunk.h"
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "file.h"
 #include "memory.h"
 #include "object.h"
 #include "string.h"
@@ -17,30 +19,6 @@
 #include "value.h"
 
 VM vm;
-
-// TODO: more native functions
-
-// Native functions:
-
-static Value clockNative(int argCount, Value *args) {
-  return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
-}
-
-static Value printNative(int argCount, Value *args) {
-  for (int i = 0; i < argCount; i++) {
-    printValue(args[i]);
-  }
-  printf("\n");
-  return NIL_VAL;
-}
-
-static Value importNative(int argCount, Value *args) {
-  for (int i = 0; i < argCount; i++) {
-    // TODO
-  }
-
-  return NIL_VAL;
-}
 
 static void resetStack() {
   vm.stackTop = vm.stack;
@@ -79,6 +57,42 @@ static void runtimeError(const char *format, ...) {
     }
   }
   resetStack();
+}
+
+// TODO: more native functions
+
+// Native functions:
+
+static Value clockNative(int argCount, Value *args) {
+  return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+static Value printNative(int argCount, Value *args) {
+  for (int i = 0; i < argCount; i++) {
+    printValue(args[i]);
+  }
+  printf("\n");
+  return NIL_VAL;
+}
+
+static Value importNative(int argCount, Value *args) {
+  for (int i = 0; i < argCount; i++) {
+    if (IS_STRING(args[i])) {
+      char *filename = AS_CSTRING(args[i]);
+
+      char *source = readFile(filename);
+
+      InterpretResult res = interpret(source);
+
+      if (res != INTERPRET_OK) {
+        runtimeError("Can't import");  // FIXME
+      }
+
+      free(source);
+    }
+  }
+
+  return NIL_VAL;
 }
 
 static void defineNative(const char *name, NativeFn function) {
