@@ -79,10 +79,22 @@ static Value importNative(int argCount, Value *args) {
   for (int i = 0; i < argCount; i++) {
     if (IS_STRING(args[i])) {
       char *filename = AS_CSTRING(args[i]);
+      char *source = NULL;
 
-      char *source = readFile(filename);
+      int resOfReadingFile = readFile(filename, &source);
+
+      if (resOfReadingFile == 0) {
+        printf("Can't read file\n");  // FIXME
+        return NIL_VAL;
+      }
+
+      VM copyOfVm = vm;
+
+      initVM();
 
       InterpretResult res = interpret(source);
+
+      vm = copyOfVm;
 
       if (res != INTERPRET_OK) {
         runtimeError("Can't import");  // FIXME
@@ -321,9 +333,12 @@ static InterpretResult run() {
     push(valType(a op b));                            \
   } while (false)
 
+#ifdef DEBUG_TRACE_EXECUTION
+  printf("\nrunning...\n\n");
+#endif /* ifdef DEBUG_TRACE_EXECUTION */
+
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION  // enable debug trace if macro is defined
-    printf("\nrunning... \n");
     printf("          ");
     for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
       printf("[ ");

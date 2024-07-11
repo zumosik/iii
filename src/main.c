@@ -16,7 +16,7 @@ static void repl() {
   }
 }
 
-int main(int argc, const char *argv[]) {
+int main(int argc, char *argv[]) {
   initVM();
 
   if (argc == 1) {
