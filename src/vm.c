@@ -9,6 +9,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "file.h"
 #include "memory.h"
 #include "object.h"
 #include "string.h"
@@ -331,9 +332,10 @@ static InterpretResult run() {
         Value result = pop();
         closeUpvalues(frame->slots);
         vm.frameCount--;
-        if (vm.frameCount == 0) {
+        if (vm.frameCount == 0) {  // ending programm
           pop();
           return INTERPRET_OK;
+          // TODO: add all globals to the table of imports
         }
         vm.stackTop = frame->slots;
         push(result);
@@ -570,6 +572,22 @@ static InterpretResult run() {
 
         frame = &vm.frames[vm.frameCount - 1];
         break;
+      }
+      case OP_IMPORT: {
+        ObjString *filename = READ_STRING_LONG();
+
+        char *source = readFile(filename->chars);
+
+        InterpretResult res = interpret(source);
+
+        if (res != INTERPRET_OK) {
+          runtimeError("Problem with %s file",
+                       filename);  // FIXME: make something nicer
+        }
+
+        // while interpreting file it should add all globals to table
+        //
+        // FIXME: handle circular imports
       }
     }
   }

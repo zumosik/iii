@@ -713,6 +713,14 @@ static void returnStatement() {
   }
 }
 
+static void importStatement() {
+  consume(TOKEN_IDENTIFIER, "Expect file name");
+  uint16_t arg = identifierConstant(&parser.previous);
+
+  emitByte(OP_IMPORT);
+  emitShort(arg);
+}
+
 void statement() {
   if (match(TOKEN_IF)) {
     ifStatement();
@@ -726,6 +734,8 @@ void statement() {
     endScope();
   } else if (match(TOKEN_RETURN)) {
     returnStatement();
+  } else if (match(TOKEN_IMPORT)) {
+    importStatement();
   } else {
     expressionStatement();
   }
@@ -923,6 +933,7 @@ ParseRule rules[] = {
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_IMPORT] = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
 };

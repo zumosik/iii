@@ -64,6 +64,8 @@ typedef enum {
   OP_CLASS,    // create a class
   OP_METHOD,   // define method of a class
   OP_INHERIT,  // inherit class from another
+
+  OP_IMPORT,  // compile, run and save globals
 } OpCode;
 
 typedef struct {
