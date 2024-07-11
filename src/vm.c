@@ -34,6 +34,14 @@ static Value printNative(int argCount, Value *args) {
   return NIL_VAL;
 }
 
+static Value importNative(int argCount, Value *args) {
+  for (int i = 0; i < argCount; i++) {
+    // TODO
+  }
+
+  return NIL_VAL;
+}
+
 static void resetStack() {
   vm.stackTop = vm.stack;
   vm.frameCount = 0;
@@ -101,6 +109,7 @@ void initVM() {
   // -----------------------------------
   defineNative("clock", clockNative);
   defineNative("print", printNative);
+  defineNative("import", importNative);
 }
 
 void freeVM() {
