@@ -26,7 +26,7 @@ static Obj *allocateObject(size_t size, ObjType type) {
 }
 
 // FNV-1a hash
-static uint32_t hashString(const char *key, int length) {
+uint32_t hashString(const char *key, int length) {
   uint32_t hash = 2166136261u;
   for (int i = 0; i < length; i++) {
     hash ^= key[i];

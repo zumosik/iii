@@ -141,6 +141,8 @@ static void markRoots() {
     markValue(*slot);
   }
 
+  /* !!! FIXME !!!
+
   // closures
   for (int i = 0; i < vm.frameCount; i++) {
     markObject((Obj *)vm.frames[i].closure);
@@ -154,7 +156,7 @@ static void markRoots() {
 
   // table of globals
   markTable(&vm.globals);
-
+*/
   // mark compiler roots
   markCompilerRoots();
 

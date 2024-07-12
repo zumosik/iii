@@ -100,6 +100,7 @@ typedef struct {
 
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length);
+uint32_t hashString(const char *key, int length);
 
 void printObject(Value value);
 

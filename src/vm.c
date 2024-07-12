@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -17,6 +18,8 @@
 #include "value.h"
 
 VM vm;
+
+const char *defModName = "main";  // this means you can't call your modules main
 
 // TODO: more native functions
 
@@ -33,13 +36,6 @@ static Value printNative(int argCount, Value *args) {
   printf("\n");
   return NIL_VAL;
 }
-
-static void resetStack() {
-  vm.stackTop = vm.stack;
-  vm.frameCount = 0;
-  vm.openUpvalues = NULL;
-}
-
 void push(Value value) {
   *vm.stackTop = value;
   vm.stackTop++;
@@ -52,14 +48,22 @@ Value pop() {
 
 static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
+static Module *getCurrMod() { return vm.currMod; }
+
+static void resetStack() {
+  vm.stackTop = vm.stack;
+  getCurrMod()->frameCount = 0;
+  getCurrMod()->openUpvalues = NULL;
+}
+
 static void runtimeError(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vfprintf(stderr, format, args);
   va_end(args);
   fputs("\n", stderr);
-  for (int i = vm.frameCount - 1; i >= 0; i--) {
-    CallFrame *frame = &vm.frames[i];
+  for (int i = getCurrMod()->frameCount - 1; i >= 0; i--) {
+    CallFrame *frame = &getCurrMod()->frames[i];
     ObjFunc *function = frame->closure->function;
     // -1 because the IP is sitting on the next instruction to be executed.
     size_t instruction = frame->ip - function->chunk.code - 1;
@@ -77,16 +81,29 @@ static void defineNative(const char *name, NativeFn function) {
   // pushing and popping to ensure that the function is not collected by the GC
   push(OBJ_VAL(copyString(name, (int)strlen(name))));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+  tableSet(&getCurrMod()->globals, AS_STRING(vm.stack[0]), vm.stack[1]);
   pop();
   pop();
+}
+
+static void initModule(Module *mod, const char *name) {
+  initTable(&mod->globals);
+  mod->frameCount = 0;
+  mod->name = (char *)malloc(sizeof(char) * (strlen(name) + 1));
+  memcpy(mod->name, name, strlen(name) + 1);
+  mod->openUpvalues = NULL;
+}
+
+static void freeModule(Module *mod) {
+  freeTable(&mod->globals);
+  mod->frameCount = 0;
+  free(mod->name);
 }
 
 void initVM() {
   resetStack();
   vm.objects = NULL;
   initTable(&vm.strings);
-  initTable(&vm.globals);
 
   vm.initString = NULL;  // just to be safe from GC
   vm.initString = copyString(INIT_STRING, INIT_STRING_LEN);
@@ -98,6 +115,13 @@ void initVM() {
   vm.bytesAllocated = 0;
   vm.nextGC = GC_BEFORE_FIRST;
 
+  vm.modNames[vm.modCount] = 0;
+  Module *defMod = &vm.modules[vm.modCount++];
+  initModule(defMod, defModName);
+  defMod->isDefault = true;
+  defMod->origin = NULL;
+  vm.modNames[vm.modCount] = hashString(defModName, strlen(defModName));
+  vm.currMod = defMod;
   // -----------------------------------
   defineNative("clock", clockNative);
   defineNative("print", printNative);
@@ -106,7 +130,10 @@ void initVM() {
 void freeVM() {
   freeObjects();  // free all objects
   freeTable(&vm.strings);
-  freeTable(&vm.globals);
+  freeTable(&getCurrMod()->globals);
+  for (int i = 0; i < vm.modCount; i++) {
+    freeModule(&vm.modules[i]);
+  }
   vm.initString = NULL;
 }
 
@@ -117,12 +144,12 @@ static bool call(ObjClosure *closure, int argCount) {
     return false;
   }
 
-  if (vm.frameCount == FRAMES_MAX) {
+  if (getCurrMod()->frameCount == FRAMES_MAX) {
     runtimeError("Stack overflow");
     return false;
   }
 
-  CallFrame *frame = &vm.frames[vm.frameCount++];
+  CallFrame *frame = &getCurrMod()->frames[getCurrMod()->frameCount++];
   frame->closure = closure;
   frame->ip = closure->function->chunk.code;
   frame->slots = vm.stackTop - argCount - 1;
@@ -213,7 +240,7 @@ static bool bindMethod(ObjClass *cclass, ObjString *name) {
 
 static ObjUpvalue *captureUpvalue(Value *local) {
   ObjUpvalue *prevUpvalue = NULL;
-  ObjUpvalue *upvalue = vm.openUpvalues;
+  ObjUpvalue *upvalue = getCurrMod()->openUpvalues;
 
   // all this can be a little bit slow, but should be ok
   while (upvalue != NULL && upvalue->location > local) {
@@ -228,7 +255,7 @@ static ObjUpvalue *captureUpvalue(Value *local) {
   ObjUpvalue *createdUpvalue = newUpvalue(local);
 
   if (prevUpvalue == NULL) {
-    vm.openUpvalues = createdUpvalue;
+    getCurrMod()->openUpvalues = createdUpvalue;
   } else {
     prevUpvalue->next = createdUpvalue;
   }
@@ -237,11 +264,12 @@ static ObjUpvalue *captureUpvalue(Value *local) {
 }
 
 static void closeUpvalues(Value *last) {
-  while (vm.openUpvalues != NULL && vm.openUpvalues->location >= last) {
-    ObjUpvalue *upvalue = vm.openUpvalues;
+  while (getCurrMod()->openUpvalues != NULL &&
+         getCurrMod()->openUpvalues->location >= last) {
+    ObjUpvalue *upvalue = getCurrMod()->openUpvalues;
     upvalue->closed = *upvalue->location;
     upvalue->location = &upvalue->closed;
-    vm.openUpvalues = upvalue->next;
+    getCurrMod()->openUpvalues = upvalue->next;
   }
 }
 
@@ -278,7 +306,7 @@ static void undefinedVarError(ObjString *name) {
 }
 
 static InterpretResult run() {
-  CallFrame *frame = &vm.frames[vm.frameCount - 1];
+  CallFrame *frame = &getCurrMod()->frames[getCurrMod()->frameCount - 1];
 
 #define READ_BYTE() (*frame->ip++)
 #define READ_SHORT() \
@@ -330,14 +358,14 @@ static InterpretResult run() {
       case OP_RETURN: {
         Value result = pop();
         closeUpvalues(frame->slots);
-        vm.frameCount--;
-        if (vm.frameCount == 0) {
+        getCurrMod()->frameCount--;
+        if (getCurrMod()->frameCount == 0) {
           pop();
           return INTERPRET_OK;
         }
         vm.stackTop = frame->slots;
         push(result);
-        frame = &vm.frames[vm.frameCount - 1];
+        frame = &getCurrMod()->frames[getCurrMod()->frameCount - 1];
         break;
       }
       case OP_ADD: {
@@ -401,14 +429,14 @@ static InterpretResult run() {
         break;
       case OP_DEFINE_GLOBAL: {
         ObjString *name = READ_STRING_LONG();
-        tableSet(&vm.globals, name, peek(0));
+        tableSet(&getCurrMod()->globals, name, peek(0));
         pop();
         break;
       }
       case OP_GET_GLOBAL: {
         ObjString *name = READ_STRING_LONG();
         Value val;
-        if (!tableGet(&vm.globals, name, &val)) {
+        if (!tableGet(&getCurrMod()->globals, name, &val)) {
           undefinedVarError(name);
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -418,8 +446,8 @@ static InterpretResult run() {
       }
       case OP_SET_GLOBAL: {
         ObjString *name = READ_STRING_LONG();
-        if (tableSet(&vm.globals, name, peek(0))) {
-          tableDelete(&vm.globals, name);
+        if (tableSet(&getCurrMod()->globals, name, peek(0))) {
+          tableDelete(&getCurrMod()->globals, name);
           undefinedVarError(name);
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -456,7 +484,7 @@ static InterpretResult run() {
         if (!callValue(peek(argCount), argCount)) {
           return INTERPRET_RUNTIME_ERROR;
         }
-        frame = &vm.frames[vm.frameCount - 1];
+        frame = &getCurrMod()->frames[getCurrMod()->frameCount - 1];
         break;
       }
       case OP_CLOSURE: {
@@ -537,7 +565,7 @@ static InterpretResult run() {
         if (!invoke(method, argCount)) {
           return INTERPRET_RUNTIME_ERROR;
         }
-        frame = &vm.frames[vm.frameCount - 1];
+        frame = &getCurrMod()->frames[getCurrMod()->frameCount - 1];
         break;
       }
       case OP_INHERIT: {
@@ -568,7 +596,7 @@ static InterpretResult run() {
           return INTERPRET_RUNTIME_ERROR;
         }
 
-        frame = &vm.frames[vm.frameCount - 1];
+        frame = &getCurrMod()->frames[getCurrMod()->frameCount - 1];
         break;
       }
     }
