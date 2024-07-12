@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -48,6 +49,14 @@ Value pop() {
 
 static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
+Module *getModByHash(uint32_t hash) {
+  for (int i = 0; i < vm.modCount; i++) {
+    if (vm.modNames[i] == hash) {
+      return &vm.modules[i];
+    }
+  }
+  return NULL;
+}
 Module *getCurrMod() { return vm.currMod; }
 
 static void resetStack() {
@@ -153,6 +162,8 @@ static bool call(ObjClosure *closure, int argCount) {
   frame->closure = closure;
   frame->ip = closure->function->chunk.code;
   frame->slots = vm.stackTop - argCount - 1;
+  frame->globalOwner = closure->globalOwner;
+  frame->globals = closure->globals;
   return true;
 }
 
@@ -263,13 +274,12 @@ static ObjUpvalue *captureUpvalue(Value *local) {
   return createdUpvalue;
 }
 
-static void closeUpvalues(Value *last) {
-  while (getCurrMod()->openUpvalues != NULL &&
-         getCurrMod()->openUpvalues->location >= last) {
-    ObjUpvalue *upvalue = getCurrMod()->openUpvalues;
+static void closeUpvalues(Module *mod, Value *last) {
+  while (mod->openUpvalues != NULL && mod->openUpvalues->location >= last) {
+    ObjUpvalue *upvalue = mod->openUpvalues;
     upvalue->closed = *upvalue->location;
     upvalue->location = &upvalue->closed;
-    getCurrMod()->openUpvalues = upvalue->next;
+    mod->openUpvalues = upvalue->next;
   }
 }
 
@@ -357,7 +367,7 @@ static InterpretResult run() {
         break;
       case OP_RETURN: {
         Value result = pop();
-        closeUpvalues(frame->slots);
+        closeUpvalues(getCurrMod(), frame->slots);
         getCurrMod()->frameCount--;
         if (getCurrMod()->frameCount == 0) {
           pop();
@@ -489,7 +499,7 @@ static InterpretResult run() {
       }
       case OP_CLOSURE: {
         ObjFunc *function = AS_FUNCTION(READ_CONSTANT_LONG());
-        ObjClosure *closure = newClosure(function);
+        ObjClosure *closure = newClosure(function, frame->globalOwner);
         push(OBJ_VAL(closure));
         for (int i = 0; i < closure->upvalueCount; i++) {
           uint8_t isLocal = READ_BYTE();
@@ -513,7 +523,8 @@ static InterpretResult run() {
         break;
       }
       case OP_CLOSE_UPVALUE: {
-        closeUpvalues(vm.stackTop - 1);
+        Module *mod = getModByHash(frame->globalOwner);
+        closeUpvalues(mod, vm.stackTop - 1);
         pop();
         break;
       }
@@ -614,9 +625,13 @@ InterpretResult interpret(const char *source) {
   if (func == NULL) return INTERPRET_COMPILE_ERROR;
 
   push(OBJ_VAL(func));
-  ObjClosure *closure = newClosure(func);
+  ObjClosure *closure = newClosure(func, 0);
   pop();
   push(OBJ_VAL(closure));
+
+  closure->globalOwner = 0;
+  closure->globals = &vm.modules[0].globals;
+
   callValue(OBJ_VAL(closure), 0);
 
   return run();

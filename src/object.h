@@ -1,6 +1,8 @@
 #ifndef iii_object_h
 #define iii_object_h
 
+#include <stdint.h>
+
 #include "chunk.h"
 #include "table.h"
 #include "value.h"
@@ -78,6 +80,8 @@ typedef struct {
   ObjFunc *function;
   ObjUpvalue **upvalues;
   int upvalueCount;
+  uint32_t globalOwner;
+  Table *globals;
 } ObjClosure;
 
 typedef struct {
@@ -106,7 +110,7 @@ void printObject(Value value);
 
 ObjFunc *newFunction();
 ObjNative *newNative(NativeFn function);
-ObjClosure *newClosure(ObjFunc *function);
+ObjClosure *newClosure(ObjFunc *function, uint32_t globalOwner);
 ObjUpvalue *newUpvalue(Value *slot);
 ObjClass *newClass(ObjString *name);
 ObjInstance *newInstance(ObjClass *cclass);

@@ -1,5 +1,6 @@
 #include "object.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -131,7 +132,7 @@ ObjNative *newNative(NativeFn function) {
   return native;
 }
 
-ObjClosure *newClosure(ObjFunc *function) {
+ObjClosure *newClosure(ObjFunc *function, uint32_t globalOwner) {
   ObjUpvalue **upvalues = ALLOCATE(ObjUpvalue *, function->upvalueCount);
 
   for (int i = 0; i < function->upvalueCount; i++) {
@@ -142,6 +143,9 @@ ObjClosure *newClosure(ObjFunc *function) {
   closure->function = function;
   closure->upvalues = upvalues;
   closure->upvalueCount = function->upvalueCount;
+  closure->globalOwner = globalOwner;
+  closure->globals = &getModByHash(globalOwner)->globals;
+
   return closure;
 }
 

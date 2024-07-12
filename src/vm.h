@@ -24,6 +24,8 @@ typedef struct {
   ObjClosure *closure;
   uint8_t *ip;
   Value *slots;
+  uint32_t globalOwner;
+  Table *globals;
 } CallFrame;
 
 typedef enum {
@@ -41,6 +43,9 @@ typedef struct Module {
   char *name;                    // name of module
   struct Module *origin;         // from where module was imported
 } Module;
+
+Module *getModByHash(uint32_t hash);
+Module *getCurrMod();
 
 typedef struct {
   Value stack[STACK_MAX];  // stack
@@ -77,7 +82,5 @@ InterpretResult interpret(const char *source);
 
 void push(Value value);
 Value pop();
-
-Module *getCurrMod();
 
 #endif
