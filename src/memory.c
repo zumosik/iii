@@ -141,22 +141,19 @@ static void markRoots() {
     markValue(*slot);
   }
 
-  /* !!! FIXME !!!
-
   // closures
-  for (int i = 0; i < vm.frameCount; i++) {
-    markObject((Obj *)vm.frames[i].closure);
+  for (int i = 0; i < getCurrMod()->frameCount; i++) {
+    markObject((Obj *)getCurrMod()->frames[i].closure);
   }
 
   // open upvalues
-  for (ObjUpvalue *upvalue = vm.openUpvalues; upvalue != NULL;
+  for (ObjUpvalue *upvalue = getCurrMod()->openUpvalues; upvalue != NULL;
        upvalue = upvalue->next) {
     markObject((Obj *)upvalue);
   }
 
   // table of globals
-  markTable(&vm.globals);
-*/
+  markTable(&getCurrMod()->globals);
   // mark compiler roots
   markCompilerRoots();
 

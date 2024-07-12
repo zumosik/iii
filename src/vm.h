@@ -78,4 +78,6 @@ InterpretResult interpret(const char *source);
 void push(Value value);
 Value pop();
 
+Module *getCurrMod();
+
 #endif

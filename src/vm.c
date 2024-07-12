@@ -48,7 +48,7 @@ Value pop() {
 
 static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
-static Module *getCurrMod() { return vm.currMod; }
+Module *getCurrMod() { return vm.currMod; }
 
 static void resetStack() {
   vm.stackTop = vm.stack;
