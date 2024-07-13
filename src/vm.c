@@ -59,11 +59,7 @@ Module *getModByHash(uint32_t hash) {
 }
 Module *getCurrMod() { return vm.currMod; }
 
-static void resetStack() {
-  vm.stackTop = vm.stack;
-  getCurrMod()->frameCount = 0;
-  getCurrMod()->openUpvalues = NULL;
-}
+static void resetStack() { vm.stackTop = vm.stack; }
 
 static void runtimeError(const char *format, ...) {
   va_list args;

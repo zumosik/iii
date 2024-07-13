@@ -142,18 +142,28 @@ static void markRoots() {
   }
 
   // closures
-  for (int i = 0; i < getCurrMod()->frameCount; i++) {
-    markObject((Obj *)getCurrMod()->frames[i].closure);
+  for (int i = 0; i < vm.modCount; i++) {
+    Module *mod = &vm.modules[i];
+    for (int j = 0; j < mod->frameCount; j++) {
+      markObject((Obj *)mod->frames[j].closure);
+    }
   }
 
   // open upvalues
-  for (ObjUpvalue *upvalue = getCurrMod()->openUpvalues; upvalue != NULL;
-       upvalue = upvalue->next) {
-    markObject((Obj *)upvalue);
+
+  for (int i = 0; i < vm.modCount; i++) {
+    Module *mod = &vm.modules[i];
+    for (ObjUpvalue *upvalue = mod->openUpvalues; upvalue != NULL;
+         upvalue = upvalue->next) {
+      markObject((Obj *)upvalue);
+    }
+  }
+  // table of globals
+  for (int i = 0; i < vm.modCount; i++) {
+    Module *mod = &vm.modules[i];
+    markTable(&mod->globals);
   }
 
-  // table of globals
-  markTable(&getCurrMod()->globals);
   // mark compiler roots
   markCompilerRoots();
 
