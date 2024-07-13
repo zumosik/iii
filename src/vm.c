@@ -606,6 +606,14 @@ static InterpretResult run() {
         frame = &getCurrMod()->frames[getCurrMod()->frameCount - 1];
         break;
       }
+      case OP_IMPORT: {
+        ObjString *a = READ_STRING_LONG();
+        printf("import: %s\n", a->chars);
+
+        // 1. add .iii to file
+        // 2. compile and run it as new module
+        // 3. copy globals
+      }
     }
   }
 
