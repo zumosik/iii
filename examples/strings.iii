@@ -1,0 +1,11 @@
+// This program shows how to work with strings 
+
+var s = "Hello"; // create string
+var world = "World"; // create another string 
+
+var res = s + " " + world; // append strings using '+'
+
+print(res); // Output: 'Hello world'
+
+// to find len of string you can use builtin function 'len'
+print(len(res)); // Output: 11 

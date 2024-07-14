@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -19,6 +20,7 @@
 VM vm;
 
 // TODO: more native functions
+// TODO: arrays and tables 
 
 // Native functions:
 
@@ -31,6 +33,26 @@ static Value printNative(int argCount, Value *args) {
     printValue(args[i]);
   }
   printf("\n");
+  return NIL_VAL;
+}
+
+static Value lenNative(int argCount, Value* args) {
+  if (argCount == 1) {
+    // add arrays and tables when they will exist 
+    if (IS_STRING(args[0])) {
+      ObjString* s = AS_STRING(args[0]);
+      return NUM_VAL(s->length); 
+    }
+  }
+  return NIL_VAL;
+}
+
+static Value exitNative(int argCount, Value* args) {
+  if (argCount == 1) {
+    double code = AS_NUM(args[0]);
+    exit(code);
+  }
+  exit(0);
   return NIL_VAL;
 }
 
@@ -101,6 +123,8 @@ void initVM() {
   // -----------------------------------
   defineNative("clock", clockNative);
   defineNative("print", printNative);
+  defineNative("len", lenNative);
+  defineNative("exit", exitNative);
 }
 
 void freeVM() {
