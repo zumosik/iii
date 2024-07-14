@@ -22,8 +22,15 @@ static void runFile(const char *path) {
   char *source = readFile(path);
   InterpretResult result = interpret(source);
   free(source);
-  if (result == INTERPRET_COMPILE_ERROR) exit(1);
-  if (result == INTERPRET_RUNTIME_ERROR) exit(1);
+  if (result == INTERPRET_COMPILE_ERROR)
+  {
+    printf("(Compile error)\n");
+    exit(1); 
+  }
+  if (result == INTERPRET_RUNTIME_ERROR) {
+    printf("(Runtime error)\n");
+    exit(1); 
+  }
 }
 
 static void repl() {
