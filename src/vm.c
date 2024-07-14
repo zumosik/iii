@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -43,6 +44,15 @@ static Value lenNative(int argCount, Value* args) {
       return NUM_VAL(s->length); 
     }
   }
+  return NIL_VAL;
+}
+
+static Value exitNative(int argCount, Value* args) {
+  if (argCount == 1) {
+    double code = AS_NUM(args[0]);
+    exit(code);
+  }
+  exit(0);
   return NIL_VAL;
 }
 
@@ -114,6 +124,7 @@ void initVM() {
   defineNative("clock", clockNative);
   defineNative("print", printNative);
   defineNative("len", lenNative);
+  defineNative("exit", exitNative);
 }
 
 void freeVM() {
