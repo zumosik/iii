@@ -2,34 +2,9 @@
 
 
 # iii
-This repository contains an interpreter for "iii" programming language 
 
-<!-- TOC start -->
-- [iii](#iii)
-- [About language ](#about-language)
-- [1. Installation ](#1-installation)
-   * [Usage](#usage)
-- [2. Syntax](#2-syntax)
-   * [2.1 Definitions ](#21-definitions)
-   * [2.2 Arithmetic operations ](#22-arithmetic-operations)
-   * [2.3 Builtin functions](#23-builtin-functions)
-   * [2.5 Functions ](#25-functions)
-   * [2.6 If-else statements ](#26-if-else-statements)
-   * [2.7 Loops](#27-loops)
-      + [For ](#for)
-      + [While ](#while)
-   * [2.9 Comments](#29-comments)
-   * [Class system ](#class-system)
-      + [Basics](#basics)
-      + [Inheritance](#inheritance)
-<!-- TOC end -->
-# About language 
-**iii** language is:
-- high-level
-- open source
-- object-oriented
-- dynamically typed 
-- garbage-collected
+This is my little _dynamically-typed interpreted_ language with _Garbage-collection_ and ability to do _Object-oriented programming_ .
+
 # 1. Installation 
 You will need **C compiler** and **Make**
 To compile interpreter:
@@ -135,7 +110,7 @@ while(true) { // infinite while loop
 To create single line comment use `//`.
 **iii** don't have multi line comments.
 
-## Class system 
+## OOP
 **iii** is object-oriented and have class system
 ### Basics
 ```
