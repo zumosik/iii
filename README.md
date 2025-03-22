@@ -3,7 +3,7 @@
 
 # iii
 
-This is my little _dynamically-typed interpreted_ language with _Garbage-collection_ and ability to do _Object-oriented programming_ .
+This is my little _dynamically-typed interpreted_ language with _Garbage-collection_ and ability to do _Object-oriented programming_. (Written in C) 
 
 # 1. Installation 
 You will need **C compiler** and **Make**
